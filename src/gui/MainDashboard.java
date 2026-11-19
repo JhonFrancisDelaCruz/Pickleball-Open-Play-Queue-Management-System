@@ -1,12 +1,18 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
- */
 package gui;
 
-public class MainDashboard extends javax.swing.JFrame {
+import javax.swing.JFrame;
+
+public class MainDashboard extends JFrame {
+
     public MainDashboard() {
         initComponents();
+
+        setTitle("Pickleball Queue Management System");
+        setSize(1200, 700);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+        setResizable(false);
+        setVisible(true);
     }
 
     @SuppressWarnings("unchecked")
