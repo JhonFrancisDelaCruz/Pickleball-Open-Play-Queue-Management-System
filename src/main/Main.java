@@ -1,10 +1,15 @@
 package main;
 
 import gui.MainDashboard;
+import javax.swing.SwingUtilities;
+
 public class Main {
 
     public static void main(String[] args) {
-       new MainDashboard();
-    } 
+
+        SwingUtilities.invokeLater(() -> {
+            new MainDashboard().setVisible(true);
+        });
+
+    }
 }
- 
