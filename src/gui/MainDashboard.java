@@ -24,11 +24,25 @@ public class MainDashboard extends JFrame {
     pnlCourt.setLayout(new BoxLayout(pnlCourt, BoxLayout.X_AXIS));
     pnlCourt.setPreferredSize(null);
     scrollCourt.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+    // Keep the courts scroll pane from growing with the number of courts; otherwise the outer
+    // pane (no horizontal scrollbar) clips extra courts and the courts scrollbar never appears.
+    scrollCourt.setPreferredSize(new Dimension(0, 308));
+    scrollCourt.setMinimumSize(new Dimension(0, 308));
     scrollCourt.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+
+    jTextArea4.setEditable(false);
+    jTextArea5.setEditable(false);
+    jTextArea4.setForeground(Color.WHITE);
+    jTextArea5.setForeground(Color.WHITE);
+    jTextArea5.setLineWrap(true);
+    jTextArea5.setWrapStyleWord(true);
+    jButton7.addActionListener(e -> logout());
 
     addCourt();
     addCourt();
     addCourt();
+    refreshAll();
+    log("System ready. 3 courts available.");
     setTitle("Pickleball Queue Management System");
     setSize(1200, 700);
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -42,6 +56,7 @@ public class MainDashboard extends JFrame {
     for (Court court : courts) {
         courtCount++;
         court.setCourtNumber(courtCount);
+        court.setOnCompleteGame(() -> completeGame(court));
         Dimension courtSize = new Dimension(300, 280);
         court.setPreferredSize(courtSize);
         court.setMinimumSize(courtSize);
@@ -63,22 +78,26 @@ public class MainDashboard extends JFrame {
   public void refreshWaitingPlayers() {
     WaitingPlayers.setText("");
 
-    int count = 0;
-
-    for (Player player : queueManager.getPlayerQueue().getPlayers()) {
+    for (Player player : queueManager.getPlayerQueue().toList()) {
         WaitingPlayers.append(
-            "  " + player.getName() + " - " + player.getId() + "\n"
+            "  " + player.getName() + " - " + player.getId()
+            + (player.isEligible() ? "" : "  (skips next game)") + "\n"
         );
-        count++;
     }
 
-    TotaWaitingPlayers.setText(String.valueOf(count));
+    // NEXT 4 ELIGIBLE (peek only - nobody is removed)
+    jTextArea4.setText("");
+    for (Player player : queueManager.peekNextEligible(QueueManager.PLAYERS_PER_GAME)) {
+        jTextArea4.append("  " + player.getName() + " - " + player.getId() + "\n");
+    }
+
+    updateStatistics();
 }
-  
+
   private void updateStatistics() {
 
     TotaWaitingPlayers.setText(
-        String.valueOf(queueManager.getPlayerQueue().getPlayers().size())
+        String.valueOf(queueManager.getPlayerQueue().size())
     );
 
     ActiveCourt.setText(
@@ -93,6 +112,106 @@ public class MainDashboard extends JFrame {
         String.valueOf(totalWinnersCount)
     );
 }
+
+  private void refreshAll() {
+    refreshWaitingPlayers();
+  }
+
+  private void log(String message) {
+    String time = new java.text.SimpleDateFormat("HH:mm:ss").format(new java.util.Date());
+    jTextArea5.append("[" + time + "] " + message + "\n");
+    jTextArea5.setCaretPosition(jTextArea5.getDocument().getLength());
+  }
+
+  private String names(List<Player> list) {
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < list.size(); i++) {
+        if (i > 0) sb.append(", ");
+        sb.append(list.get(i).getName());
+    }
+    return sb.toString();
+  }
+
+  private Player findActivePlayer(String id) {
+    for (List<Player> game : activeGames.values()) {
+        for (Player p : game) {
+            if (p.getId().equalsIgnoreCase(id)) return p;
+        }
+    }
+    return null;
+  }
+
+  /** Complete Game: 1) choose the winning team, 2) choose who continues, 3) rotate the queue. */
+  private void completeGame(Court court) {
+    List<Player> gamePlayers = activeGames.get(court);
+    if (gamePlayers == null) {
+        JOptionPane.showMessageDialog(this, "There is no game in progress on this court.");
+        return;
+    }
+    int courtNumber = courts.indexOf(court) + 1;
+
+    // 1) winner popup
+    winner winnerDialog = new winner(this, true);
+    winnerDialog.setGame(courtNumber, gamePlayers);
+    winnerDialog.setLocationRelativeTo(this);
+    winnerDialog.setVisible(true);
+    char team = winnerDialog.getWinningTeam();
+    if (team == 0) {
+        return; // closed without choosing - game stays active
+    }
+
+    // 2) who wants to play again?
+    ContinuingPlayer continueDialog = new ContinuingPlayer(this, true);
+    continueDialog.setPlayers(gamePlayers);
+    continueDialog.setLocationRelativeTo(this);
+    continueDialog.setVisible(true);
+    if (!continueDialog.isConfirmed()) {
+        return; // closed without confirming - game stays active
+    }
+
+    List<Player> winners = new ArrayList<>(gamePlayers.subList(team == 'A' ? 0 : 2, team == 'A' ? 2 : 4));
+    List<Player> continuing = new ArrayList<>();
+    for (int i = 0; i < gamePlayers.size(); i++) {
+        if (continueDialog.wantsToContinue(i)) continuing.add(gamePlayers.get(i));
+    }
+
+    // 3) record result and rotate
+    for (Player p : winners) p.addWin();
+    totalWinnersCount += winners.size();
+    completedGamesCount++;
+    activeGames.remove(court);
+    court.clearPlayers();
+
+    List<Player> noRoom = queueManager.completeGame(gamePlayers, continuing);
+
+    log("Court " + courtNumber + " - GAME COMPLETED. Team " + team + " won (" + names(winners) + ").");
+    for (Player p : gamePlayers) {
+        if (noRoom.contains(p)) {
+            log(p.getName() + " (" + p.getId() + ") wanted to continue but the queue is full - removed.");
+        } else if (continuing.contains(p) && !p.isLeaveAfterGame()) {
+            log(p.getName() + " (" + p.getId() + ") returned to the end of the queue"
+                + (p.isEligible() ? "." : " (must skip the next game selection)."));
+        } else {
+            log(p.getName() + " (" + p.getId() + ") left the system.");
+        }
+    }
+    refreshAll();
+
+    if (!noRoom.isEmpty()) {
+        JOptionPane.showMessageDialog(this,
+            "The waiting queue is full (" + QueueManager.MAX_WAITING + " players).\n"
+            + "These players could not rejoin and were removed: " + names(noRoom));
+    }
+  }
+
+  private void logout() {
+    int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to logout?",
+        "Logout", JOptionPane.YES_NO_OPTION);
+    if (confirm == JOptionPane.YES_OPTION) {
+        dispose();
+        System.exit(0);
+    }
+  }
 
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -559,16 +678,21 @@ public class MainDashboard extends JFrame {
         dialog.setLocationRelativeTo(this);
         dialog.setVisible(true);
 
+        Player added = dialog.getRegisteredPlayer();
+        if (added != null) {
+            log("Registered " + added.getName() + " (" + added.getId() + ").");
+        }
         refreshWaitingPlayers();
     }//GEN-LAST:event_RegisterActionPerformed
 
     private void StartGameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_StartGameActionPerformed
-         // Check if there are at least 4 waiting players
-    if (queueManager.getPlayerQueue().getPlayers().size() < 4) {
-        JOptionPane.showMessageDialog(
-            this,
-            "Not enough players! You need 4 players to start a game."
-        );
+    // Need 4 eligible waiting players (FIFO, skipping players who must sit out)
+    if (queueManager.getPlayerQueue().size() < QueueManager.PLAYERS_PER_GAME) {
+        JOptionPane.showMessageDialog(this,"Not enough players! You need 4 players to start a game.");
+        return;
+    }
+    if (queueManager.countEligible() < QueueManager.PLAYERS_PER_GAME) {
+        JOptionPane.showMessageDialog(this,"Not enough eligible players! Some waiting players must skip this game selection.");
         return;
     }
 
@@ -583,32 +707,17 @@ public class MainDashboard extends JFrame {
 
     // Check if there is an available court
     if (availableCourt == null) {
-        JOptionPane.showMessageDialog(
-            this,
-            "There are no available courts!"
-        );
+        JOptionPane.showMessageDialog(this,"There are no available courts!");
         return;
     }
-
-    List<Player> gamePlayers = new ArrayList<>();
-
-    for (int i = 0; i < 4; i++) {
-        gamePlayers.add(queueManager.getPlayerQueue().getNextPlayer());
-    }
-
-    // Display the players inside the court
+    List<Player> gamePlayers = queueManager.selectPlayersForGame();
     availableCourt.setPlayers(gamePlayers);
-
-    // Mark the court as occupied
     activeGames.put(availableCourt, gamePlayers);
-
-    // Refresh the waiting players display
+    log("Court " + (courts.indexOf(availableCourt) + 1) + " - GAME STARTED: " + names(gamePlayers) + ".");
     refreshWaitingPlayers();
-
-    JOptionPane.showMessageDialog(
-        this,
-        "Game started successfully!"
-    );
+    
+    JOptionPane.showMessageDialog(this,"Game started successfully!");
+    
     }//GEN-LAST:event_StartGameActionPerformed
 
     private void PlayerIdActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_PlayerIdActionPerformed
@@ -616,11 +725,41 @@ public class MainDashboard extends JFrame {
     }//GEN-LAST:event_PlayerIdActionPerformed
 
     private void LeaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_LeaveActionPerformed
-        // TODO add your handling code here:
+        String id = PlayerId.getText().trim();
+        if (id.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please enter the Player ID of the player who wants to leave.");
+            return;
+        }
+
+        // waiting player: remove from the queue (everyone else keeps their order)
+        Player removed = queueManager.leaveQueue(id);
+        if (removed != null) {
+            log(removed.getName() + " (" + removed.getId() + ") left the queue.");
+            PlayerId.setText("");
+            refreshWaitingPlayers();
+            return;
+        }
+
+        // currently playing: leaves once the game is finished
+        Player playing = findActivePlayer(id);
+        if (playing != null) {
+            if (playing.isLeaveAfterGame()) {
+                JOptionPane.showMessageDialog(this, playing.getName() + " is already set to leave after the game.");
+            } else {
+                playing.setLeaveAfterGame(true);
+                log(playing.getName() + " (" + playing.getId() + ") is playing and will leave after the game.");
+                JOptionPane.showMessageDialog(this, playing.getName() + " is currently playing and will leave after the game.");
+            }
+            PlayerId.setText("");
+            return;
+        }
+
+        JOptionPane.showMessageDialog(this, "Player ID not found!");
     }//GEN-LAST:event_LeaveActionPerformed
 
     private void AddCourtActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AddCourtActionPerformed
         addCourt();
+        log("Court " + courts.size() + " added.");
     }//GEN-LAST:event_AddCourtActionPerformed
 
     private void deleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteActionPerformed
@@ -628,6 +767,16 @@ public class MainDashboard extends JFrame {
         JOptionPane.showMessageDialog(
             this,
             "There are no courts to delete!",
+            "Delete Court",
+            JOptionPane.WARNING_MESSAGE
+        );
+        return;
+    }
+
+    if (activeGames.containsKey(courts.get(courts.size() - 1))) {
+        JOptionPane.showMessageDialog(
+            this,
+            "The last court has a game in progress. Complete the game first!",
             "Delete Court",
             JOptionPane.WARNING_MESSAGE
         );
@@ -647,6 +796,7 @@ public class MainDashboard extends JFrame {
 
         // Refresh the panel
         refreshCourtPanel();
+        log("Last court deleted. " + courts.size() + " court(s) remaining.");
     }
     }//GEN-LAST:event_deleteActionPerformed
 

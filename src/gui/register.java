@@ -4,16 +4,25 @@ package gui;
 import javax.swing.JOptionPane;
 import model.Player;
 import service.QueueManager;
+import queue.PlayerQueue;
+import java.util.*;
 
 public class register extends javax.swing.JDialog {
-    
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(register.class.getName());
     private QueueManager queueManager;
+    private Player registeredPlayer = null;
+
+    /** The player that was just registered, or null if the dialog was cancelled. */
+    public Player getRegisteredPlayer() {
+        return registeredPlayer;
+    }
+    
     public register(java.awt.Frame parent, boolean modal,QueueManager queueManager) {
         super(parent, modal);
         this.queueManager = queueManager;
         initComponents();
     }
+    
 
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -129,23 +138,33 @@ public class register extends javax.swing.JDialog {
     }//GEN-LAST:event_PlayerIDActionPerformed
 
     private void ConfirmActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ConfirmActionPerformed
-     String name = PlayerName.getText().trim();
-    String contact = PlayerID.getText().trim();
-
-    if (name.isEmpty() || contact.isEmpty()) {
+    String name = PlayerName.getText().trim();
+    String id = PlayerID.getText().trim();
+    
+    if (name.isEmpty() || id.isEmpty()) {
         JOptionPane.showMessageDialog(this, "Please fill in all fields!");
         return;
     }
-    Player player = new Player(name, contact);
-    queueManager.registerPlayer(player);
+    
+    Player player = new Player(id, name);
 
-    JOptionPane.showMessageDialog(this, "Player registered successfully!");
+    QueueManager.RegisterResult result = queueManager.registerPlayer(player);
+    if (result == QueueManager.RegisterResult.DUPLICATE) {
+        JOptionPane.showMessageDialog(this, "Player ID already exists!");
+        return;
+    }
+    if (result == QueueManager.RegisterResult.QUEUE_FULL) {
+        JOptionPane.showMessageDialog(this,
+            "The waiting queue is full! (Maximum of " + QueueManager.MAX_WAITING + " waiting players)");
+        return;
+    }
+    registeredPlayer = player;
 
     dispose();
     }//GEN-LAST:event_ConfirmActionPerformed
 
     private void CancelActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CancelActionPerformed
-        // TODO add your handling code here:
+         dispose();
     }//GEN-LAST:event_CancelActionPerformed
 
     public static void main(String args[]) {
@@ -153,11 +172,7 @@ public class register extends javax.swing.JDialog {
         @Override
         public void run() {
             QueueManager manager = new QueueManager();
-            register dialog = new register(
-                new javax.swing.JFrame(),
-                true,
-                manager
-            );
+                register dialog = new register(new javax.swing.JFrame(),true,manager);
 
             dialog.setLocationRelativeTo(null);
             dialog.setVisible(true);

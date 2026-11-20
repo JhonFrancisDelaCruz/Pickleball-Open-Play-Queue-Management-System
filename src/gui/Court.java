@@ -5,11 +5,26 @@ import model.Player;
 
 public class Court extends javax.swing.JPanel {
 
+    private Runnable onCompleteGame;
+
     public Court() {
         initComponents();
+        clearPlayers();
     }
     public void setCourtNumber(int number) {
         courtTitle.setText("COURT " + number);
+    }
+
+    /** Called when the "Complete Game" button of this court is pressed. */
+    public void setOnCompleteGame(Runnable onCompleteGame) {
+        this.onCompleteGame = onCompleteGame;
+    }
+
+    public void clearPlayers() {
+        Player1.setText("Waiting for player...");
+        Player2.setText("Waiting for player...");
+        Player3.setText("Waiting for player...");
+        Player4.setText("Waiting for player...");
     }
     
     public void setPlayers(List<Player> players) {
@@ -20,21 +35,10 @@ public class Court extends javax.swing.JPanel {
     Player4.setText("Waiting for player...");
 
     // Display players in the four slots
-    if (players.size() > 0) {
-        Player1.setText(players.get(0).getId() + " - " + players.get(0).getName());
-    }
-
-    if (players.size() > 1) {
-        Player2.setText(players.get(1).getId() + " - " + players.get(1).getName());
-    }
-
-    if (players.size() > 2) {
-        Player3.setText(players.get(2).getId() + " - " + players.get(2).getName());
-    }
-
-    if (players.size() > 3) {
-        Player4.setText(players.get(3).getId() + " - " + players.get(3).getName());
-    }
+    if (players.size() > 0) {Player1.setText(players.get(0).getId() + " - " + players.get(0).getName());}
+    if (players.size() > 1) {Player2.setText(players.get(1).getId() + " - " + players.get(1).getName());}
+    if (players.size() > 2) {Player3.setText(players.get(2).getId() + " - " + players.get(2).getName());}
+    if (players.size() > 3) {Player4.setText(players.get(3).getId() + " - " + players.get(3).getName());}
 }
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -52,7 +56,7 @@ public class Court extends javax.swing.JPanel {
         jPanel5 = new javax.swing.JPanel();
         Player4 = new javax.swing.JLabel();
 
-        setBackground(new java.awt.Color(9, 9, 9));
+        setBackground(new java.awt.Color(0, 0, 0));
 
         completeGame.setFont(new java.awt.Font("Segoe UI Black", 1, 12)); // NOI18N
         completeGame.setText("Complete Game");
@@ -211,7 +215,9 @@ public class Court extends javax.swing.JPanel {
     }// </editor-fold>//GEN-END:initComponents
 
     private void completeGameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_completeGameActionPerformed
-       
+        if (onCompleteGame != null) {
+            onCompleteGame.run();
+        }
     }//GEN-LAST:event_completeGameActionPerformed
 
 
