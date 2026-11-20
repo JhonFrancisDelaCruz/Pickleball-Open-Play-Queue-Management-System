@@ -14,7 +14,7 @@ public class MainDashboard extends JFrame {
     
     private int courtCount = 0;
     private final java.util.List<Court> courts = new java.util.ArrayList<>();
-    private QueueManager queueManager = new QueueManager();
+    private final QueueManager queueManager = new QueueManager();
     private final Map<Court, List<Player>> activeGames = new HashMap<>();
     
     public MainDashboard() {
@@ -95,22 +95,10 @@ public class MainDashboard extends JFrame {
 }
 
   private void updateStatistics() {
-
-    TotaWaitingPlayers.setText(
-        String.valueOf(queueManager.getPlayerQueue().size())
-    );
-
-    ActiveCourt.setText(
-        String.valueOf(activeGames.size())
-    );
-
-    CompletedGames.setText(
-        String.valueOf(completedGamesCount)
-    );
-
-    TotalWinner.setText(
-        String.valueOf(totalWinnersCount)
-    );
+    TotaWaitingPlayers.setText(String.valueOf(queueManager.getPlayerQueue().size()));
+    ActiveCourt.setText(String.valueOf(activeGames.size()));
+    CompletedGames.setText(String.valueOf(completedGamesCount));
+    TotalWinner.setText(String.valueOf(totalWinnersCount));
 }
 
   private void refreshAll() {
@@ -260,6 +248,7 @@ public class MainDashboard extends JFrame {
         jButton7 = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setPreferredSize(new java.awt.Dimension(1200, 700));
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         jScrollPane3.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -294,7 +283,7 @@ public class MainDashboard extends JFrame {
                 .addComponent(jLabel4)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(TotaWaitingPlayers)
-                .addGap(0, 16, Short.MAX_VALUE))
+                .addGap(0, 0, Short.MAX_VALUE))
         );
 
         jPanel4.setBackground(new java.awt.Color(153, 153, 153));
@@ -381,7 +370,7 @@ public class MainDashboard extends JFrame {
                 .addComponent(jLabel7, javax.swing.GroupLayout.PREFERRED_SIZE, 16, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(TotalWinner)
-                .addGap(0, 0, Short.MAX_VALUE))
+                .addGap(0, 16, Short.MAX_VALUE))
         );
 
         jTextArea4.setBackground(new java.awt.Color(102, 102, 102));
@@ -469,7 +458,7 @@ public class MainDashboard extends JFrame {
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jLabel10, javax.swing.GroupLayout.PREFERRED_SIZE, 88, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 570, Short.MAX_VALUE)
                 .addComponent(AddCourt, javax.swing.GroupLayout.PREFERRED_SIZE, 111, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(delete))
@@ -487,7 +476,7 @@ public class MainDashboard extends JFrame {
         jPanel3Layout.setHorizontalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel3Layout.createSequentialGroup()
-                .addContainerGap()
+                .addGap(49, 49, 49)
                 .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addGroup(jPanel3Layout.createSequentialGroup()
                         .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -502,18 +491,18 @@ public class MainDashboard extends JFrame {
                         .addGap(18, 18, 18)
                         .addComponent(jPanel10, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                     .addComponent(scrollCourt)
-                    .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addContainerGap(153, Short.MAX_VALUE))
+                    .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(110, Short.MAX_VALUE))
         );
         jPanel3Layout.setVerticalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel3Layout.createSequentialGroup()
-                .addGap(20, 20, 20)
+                .addGap(19, 19, 19)
                 .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(jPanel2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jPanel4, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jPanel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -522,7 +511,7 @@ public class MainDashboard extends JFrame {
                 .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(jPanel10, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(58, Short.MAX_VALUE))
+                .addContainerGap(59, Short.MAX_VALUE))
         );
 
         jScrollPane3.setViewportView(jPanel3);
@@ -587,7 +576,7 @@ public class MainDashboard extends JFrame {
         WaitingPlayers.setEditable(false);
         WaitingPlayers.setBackground(new java.awt.Color(51, 51, 51));
         WaitingPlayers.setColumns(20);
-        WaitingPlayers.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        WaitingPlayers.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
         WaitingPlayers.setForeground(new java.awt.Color(255, 255, 255));
         WaitingPlayers.setRows(5);
         WaitingPlayers.setBorder(javax.swing.BorderFactory.createEtchedBorder(javax.swing.border.EtchedBorder.RAISED));
@@ -686,7 +675,7 @@ public class MainDashboard extends JFrame {
     }//GEN-LAST:event_RegisterActionPerformed
 
     private void StartGameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_StartGameActionPerformed
-    // Need 4 eligible waiting players (FIFO, skipping players who must sit out)
+
     if (queueManager.getPlayerQueue().size() < QueueManager.PLAYERS_PER_GAME) {
         JOptionPane.showMessageDialog(this,"Not enough players! You need 4 players to start a game.");
         return;
@@ -764,44 +753,24 @@ public class MainDashboard extends JFrame {
 
     private void deleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteActionPerformed
       if (courts.isEmpty()) {
-        JOptionPane.showMessageDialog(
-            this,
-            "There are no courts to delete!",
-            "Delete Court",
-            JOptionPane.WARNING_MESSAGE
-        );
+        JOptionPane.showMessageDialog(this,"There are no courts to delete!","Delete Court", JOptionPane.WARNING_MESSAGE);
         return;
     }
 
     if (activeGames.containsKey(courts.get(courts.size() - 1))) {
-        JOptionPane.showMessageDialog(
-            this,
-            "The last court has a game in progress. Complete the game first!",
-            "Delete Court",
-            JOptionPane.WARNING_MESSAGE
-        );
+        JOptionPane.showMessageDialog(this,"The last court has a game in progress. Complete the game first!", "Delete Court",JOptionPane.WARNING_MESSAGE );
         return;
     }
 
-    int confirm = JOptionPane.showConfirmDialog(
-        this,
-        "Are you sure you want to delete the last court?",
-        "Confirm Delete",
-        JOptionPane.YES_NO_OPTION
-    );
+    int confirm = JOptionPane.showConfirmDialog(this,"Are you sure you want to delete the last court?","Confirm Delete",JOptionPane.YES_NO_OPTION);
     if (confirm == JOptionPane.YES_OPTION) {
-
-        // Remove the last court
         courts.remove(courts.size() - 1);
-
-        // Refresh the panel
         refreshCourtPanel();
         log("Last court deleted. " + courts.size() + " court(s) remaining.");
     }
     }//GEN-LAST:event_deleteActionPerformed
 
 private void addCourt() {
-
     Court court = new Court();
     courts.add(court);
     refreshCourtPanel();

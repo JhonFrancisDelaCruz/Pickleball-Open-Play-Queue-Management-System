@@ -4,10 +4,6 @@ import model.Player;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Queue ADT (FIFO) implemented with a singly linked list.
- * No built-in Queue classes are used.
- */
 public class PlayerQueue {
 
     private static class Node {

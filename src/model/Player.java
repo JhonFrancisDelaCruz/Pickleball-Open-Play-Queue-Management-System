@@ -3,8 +3,6 @@ package model;
 public class Player {
     private final String id;
     private final String name;
-
-    // Open Play rotation tracking
     private int consecutiveGames = 0;        // games completed back-to-back without sitting out a selection
     private boolean skipNextSelection = false; // true = must be skipped once before becoming eligible again
     private boolean leaveAfterGame = false;  // requested to leave while playing

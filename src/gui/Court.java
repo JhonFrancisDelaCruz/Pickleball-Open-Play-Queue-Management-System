@@ -15,26 +15,19 @@ public class Court extends javax.swing.JPanel {
         courtTitle.setText("COURT " + number);
     }
 
-    /** Called when the "Complete Game" button of this court is pressed. */
     public void setOnCompleteGame(Runnable onCompleteGame) {
         this.onCompleteGame = onCompleteGame;
     }
 
     public void clearPlayers() {
-        Player1.setText("Waiting for player...");
-        Player2.setText("Waiting for player...");
-        Player3.setText("Waiting for player...");
-        Player4.setText("Waiting for player...");
+        Player1.setText(" ");
+        Player2.setText(" ");
+        Player3.setText(" ");
+        Player4.setText(" ");
     }
     
     public void setPlayers(List<Player> players) {
-    // Clear all player slots first
-    Player1.setText("Waiting for player...");
-    Player2.setText("Waiting for player...");
-    Player3.setText("Waiting for player...");
-    Player4.setText("Waiting for player...");
-
-    // Display players in the four slots
+    clearPlayers();
     if (players.size() > 0) {Player1.setText(players.get(0).getId() + " - " + players.get(0).getName());}
     if (players.size() > 1) {Player2.setText(players.get(1).getId() + " - " + players.get(1).getName());}
     if (players.size() > 2) {Player3.setText(players.get(2).getId() + " - " + players.get(2).getName());}
@@ -89,7 +82,7 @@ public class Court extends javax.swing.JPanel {
         jPanel2.setBackground(new java.awt.Color(51, 51, 51));
         jPanel2.setBorder(javax.swing.BorderFactory.createEtchedBorder());
 
-        Player1.setFont(new java.awt.Font("Segoe UI Black", 1, 12)); // NOI18N
+        Player1.setFont(new java.awt.Font("Segoe UI Black", 0, 12)); // NOI18N
         Player1.setForeground(new java.awt.Color(255, 255, 255));
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
@@ -105,15 +98,15 @@ public class Court extends javax.swing.JPanel {
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(Player1, javax.swing.GroupLayout.DEFAULT_SIZE, 14, Short.MAX_VALUE)
-                .addContainerGap())
+                .addComponent(Player1, javax.swing.GroupLayout.PREFERRED_SIZE, 14, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         sdf.setBackground(new java.awt.Color(51, 51, 51));
         sdf.setBorder(javax.swing.BorderFactory.createEtchedBorder());
         sdf.setPreferredSize(new java.awt.Dimension(243, 32));
 
-        Player2.setFont(new java.awt.Font("Segoe UI Black", 1, 12)); // NOI18N
+        Player2.setFont(new java.awt.Font("Segoe UI Black", 0, 12)); // NOI18N
         Player2.setForeground(new java.awt.Color(255, 255, 255));
 
         javax.swing.GroupLayout sdfLayout = new javax.swing.GroupLayout(sdf);
@@ -137,7 +130,7 @@ public class Court extends javax.swing.JPanel {
         fg.setBorder(javax.swing.BorderFactory.createEtchedBorder());
         fg.setPreferredSize(new java.awt.Dimension(243, 32));
 
-        Player3.setFont(new java.awt.Font("Segoe UI Black", 1, 12)); // NOI18N
+        Player3.setFont(new java.awt.Font("Segoe UI Black", 0, 12)); // NOI18N
         Player3.setForeground(new java.awt.Color(255, 255, 255));
 
         javax.swing.GroupLayout fgLayout = new javax.swing.GroupLayout(fg);
@@ -161,7 +154,7 @@ public class Court extends javax.swing.JPanel {
         jPanel5.setBorder(javax.swing.BorderFactory.createEtchedBorder());
         jPanel5.setPreferredSize(new java.awt.Dimension(4, 32));
 
-        Player4.setFont(new java.awt.Font("Segoe UI Black", 1, 12)); // NOI18N
+        Player4.setFont(new java.awt.Font("Segoe UI Black", 0, 12)); // NOI18N
         Player4.setForeground(new java.awt.Color(255, 255, 255));
 
         javax.swing.GroupLayout jPanel5Layout = new javax.swing.GroupLayout(jPanel5);
@@ -210,7 +203,7 @@ public class Court extends javax.swing.JPanel {
                 .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(36, 36, 36)
                 .addComponent(completeGame, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(8, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
     }// </editor-fold>//GEN-END:initComponents
 

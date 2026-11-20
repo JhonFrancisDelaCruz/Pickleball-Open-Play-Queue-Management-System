@@ -66,12 +66,6 @@ public class QueueManager {
         return peekNextEligible(Integer.MAX_VALUE).size();
     }
 
-    /**
-     * Removes the next four eligible players from the queue for a game.
-     * Players who must skip this selection are passed over (they keep their
-     * place in line) and become eligible again afterwards.
-     * Returns null if fewer than four eligible players are waiting.
-     */
     public List<Player> selectPlayersForGame() {
         List<Player> chosen = peekNextEligible(PLAYERS_PER_GAME);
         if (chosen.size() < PLAYERS_PER_GAME) {
@@ -93,9 +87,6 @@ public class QueueManager {
         return chosen;
     }
 
-    // ---------- Leaving ----------
-
-    /** Removes a waiting player from the queue and from the system. */
     public Player leaveQueue(String playerId) {
         Player removed = playerQueue.remove(playerId);
         if (removed != null) {
@@ -104,14 +95,6 @@ public class QueueManager {
         return removed;
     }
 
-    // ---------- Game completion / rotation ----------
-
-    /**
-     * Rotation after a game: players who continue go to the REAR of the queue
-     * (in the order given); the rest are removed from the system.
-     * Returns the players who wanted to continue but could not rejoin because
-     * the waiting queue is full.
-     */
     public List<Player> completeGame(List<Player> gamePlayers, List<Player> continuing) {
         List<Player> noRoom = new ArrayList<>();
         for (Player p : gamePlayers) {
