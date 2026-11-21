@@ -1,6 +1,6 @@
 package main;
 
-import gui.MainDashboard;
+import gui.LoginPage;
 import javax.swing.SwingUtilities;
 
 public class Main {
@@ -8,7 +8,7 @@ public class Main {
     public static void main(String[] args) {
 
         SwingUtilities.invokeLater(() -> {
-            new MainDashboard().setVisible(true);
+            new LoginPage().setVisible(true);
         });
 
     }

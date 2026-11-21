@@ -36,7 +36,6 @@ public class MainDashboard extends JFrame {
     jTextArea5.setForeground(Color.WHITE);
     jTextArea5.setLineWrap(true);
     jTextArea5.setWrapStyleWord(true);
-    jButton7.addActionListener(e -> logout());
 
     addCourt();
     addCourt();
@@ -47,7 +46,7 @@ public class MainDashboard extends JFrame {
     setSize(1200, 700);
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     setLocationRelativeTo(null);
-    setResizable(true);
+    setResizable(false);
 }
 
    private void refreshCourtPanel() {
@@ -192,15 +191,6 @@ public class MainDashboard extends JFrame {
     }
   }
 
-  private void logout() {
-    int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to logout?",
-        "Logout", JOptionPane.YES_NO_OPTION);
-    if (confirm == JOptionPane.YES_OPTION) {
-        dispose();
-        System.exit(0);
-    }
-  }
-
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -245,10 +235,9 @@ public class MainDashboard extends JFrame {
         jLabel3 = new javax.swing.JLabel();
         jScrollPane2 = new javax.swing.JScrollPane();
         WaitingPlayers = new javax.swing.JTextArea();
-        jButton7 = new javax.swing.JButton();
+        logout = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setPreferredSize(new java.awt.Dimension(1200, 700));
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         jScrollPane3.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -583,10 +572,11 @@ public class MainDashboard extends JFrame {
         WaitingPlayers.setRequestFocusEnabled(false);
         jScrollPane2.setViewportView(WaitingPlayers);
 
-        jButton7.setBackground(new java.awt.Color(102, 0, 0));
-        jButton7.setFont(new java.awt.Font("Arial Black", 1, 12)); // NOI18N
-        jButton7.setForeground(new java.awt.Color(255, 255, 255));
-        jButton7.setText("Logout");
+        logout.setBackground(new java.awt.Color(102, 0, 0));
+        logout.setFont(new java.awt.Font("Arial Black", 1, 12)); // NOI18N
+        logout.setForeground(new java.awt.Color(255, 255, 255));
+        logout.setText("Logout");
+        logout.addActionListener(this::logoutActionPerformed);
 
         javax.swing.GroupLayout jPanel13Layout = new javax.swing.GroupLayout(jPanel13);
         jPanel13.setLayout(jPanel13Layout);
@@ -603,7 +593,7 @@ public class MainDashboard extends JFrame {
                         .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE))
                     .addGroup(jPanel13Layout.createSequentialGroup()
                         .addContainerGap()
-                        .addComponent(jButton7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                        .addComponent(logout, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addContainerGap())
         );
         jPanel13Layout.setVerticalGroup(
@@ -614,7 +604,7 @@ public class MainDashboard extends JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 304, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jButton7, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(logout, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
@@ -770,6 +760,16 @@ public class MainDashboard extends JFrame {
     }
     }//GEN-LAST:event_deleteActionPerformed
 
+    private void logoutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_logoutActionPerformed
+        int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to logout?",
+        "Logout", JOptionPane.YES_NO_OPTION);
+    if (confirm == JOptionPane.YES_OPTION) {
+       new LoginPage().setVisible(true);
+    this.dispose();
+       
+    }
+    }//GEN-LAST:event_logoutActionPerformed
+
 private void addCourt() {
     Court court = new Court();
     courts.add(court);
@@ -788,7 +788,6 @@ private void addCourt() {
     private javax.swing.JLabel TotalWinner;
     private javax.swing.JTextArea WaitingPlayers;
     private javax.swing.JButton delete;
-    private javax.swing.JButton jButton7;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel2;
@@ -815,6 +814,7 @@ private void addCourt() {
     private javax.swing.JScrollPane jScrollPane5;
     private javax.swing.JTextArea jTextArea4;
     private javax.swing.JTextArea jTextArea5;
+    private javax.swing.JButton logout;
     private javax.swing.JPanel navbar;
     private javax.swing.JPanel pnlCourt;
     private javax.swing.JScrollPane scrollCourt;
