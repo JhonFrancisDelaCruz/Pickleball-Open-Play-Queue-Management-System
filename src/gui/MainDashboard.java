@@ -4,10 +4,14 @@ import java.awt.*;
 import javax.swing.*;
 import java.util.*;
 import java.util.List;
+import javax.swing.plaf.basic.BasicScrollBarUI;
 import model.Player;
 import service.QueueManager;
 
 public class MainDashboard extends JFrame {
+    private static final int INITIAL_COURTS = 3;
+    private static final int INITIAL_MAX_WAITING = 15;
+    private static final int WAITING_SLOTS_PER_COURT = 4;
     
     private int completedGamesCount = 0;
     private int totalWinnersCount = 0;
@@ -17,18 +21,24 @@ public class MainDashboard extends JFrame {
     private final QueueManager queueManager = new QueueManager();
     private final Map<Court, List<Player>> activeGames = new HashMap<>();
     
-    public MainDashboard() {
+   public MainDashboard() {
+    setUndecorated(true); 
     initComponents();
+    
+    customizeScrollBar(scrollCourts);
+    customizeScrollBar(scrollWaitingPlayers);
+    customizeScrollBar(scrollDashboard);
+    scrollDashboard.getVerticalScrollBar().setUnitIncrement(20);
     WaitingPlayers.setLineWrap(true);
     WaitingPlayers.setWrapStyleWord(true);
+
     pnlCourt.setLayout(new BoxLayout(pnlCourt, BoxLayout.X_AXIS));
     pnlCourt.setPreferredSize(null);
-    scrollCourt.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-    // Keep the courts scroll pane from growing with the number of courts; otherwise the outer
-    // pane (no horizontal scrollbar) clips extra courts and the courts scrollbar never appears.
-    scrollCourt.setPreferredSize(new Dimension(0, 308));
-    scrollCourt.setMinimumSize(new Dimension(0, 308));
-    scrollCourt.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+
+    scrollCourts.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+    scrollCourts.setPreferredSize(new Dimension(0, 308));
+    scrollCourts.setMinimumSize(new Dimension(0, 308));
+    scrollCourts.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
 
     jTextArea4.setEditable(false);
     jTextArea5.setEditable(false);
@@ -40,13 +50,19 @@ public class MainDashboard extends JFrame {
     addCourt();
     addCourt();
     addCourt();
+
     refreshAll();
     log("System ready. 3 courts available.");
+
     setTitle("Pickleball Queue Management System");
-    setSize(1200, 700);
+    setSize(1210, 700);
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     setLocationRelativeTo(null);
     setResizable(false);
+}
+   
+   private int getMaxWaitingPlayers() {
+    return INITIAL_MAX_WAITING+ ((courtCount - INITIAL_COURTS) * WAITING_SLOTS_PER_COURT);
 }
 
    private void refreshCourtPanel() {
@@ -70,21 +86,13 @@ public class MainDashboard extends JFrame {
 
     pnlCourt.revalidate();
     pnlCourt.repaint();
-    scrollCourt.revalidate();
-    scrollCourt.repaint();
+    scrollCourts.revalidate();
+    scrollCourts.repaint();
 }
     
   public void refreshWaitingPlayers() {
-    WaitingPlayers.setText("");
+    WaitingPlayers.setText(queueManager.getPlayerQueue().display());
 
-    for (Player player : queueManager.getPlayerQueue().toList()) {
-        WaitingPlayers.append(
-            "  " + player.getName() + " - " + player.getId()
-            + (player.isEligible() ? "" : "  (skips next game)") + "\n"
-        );
-    }
-
-    // NEXT 4 ELIGIBLE (peek only - nobody is removed)
     jTextArea4.setText("");
     for (Player player : queueManager.peekNextEligible(QueueManager.PLAYERS_PER_GAME)) {
         jTextArea4.append("  " + player.getName() + " - " + player.getId() + "\n");
@@ -96,13 +104,19 @@ public class MainDashboard extends JFrame {
   private void updateStatistics() {
     TotaWaitingPlayers.setText(String.valueOf(queueManager.getPlayerQueue().size()));
     ActiveCourt.setText(String.valueOf(activeGames.size()));
+    NonActiveCourt.setText(String.valueOf(courts.size() - activeGames.size()));
     CompletedGames.setText(String.valueOf(completedGamesCount));
     TotalWinner.setText(String.valueOf(totalWinnersCount));
+    jLabel10.setText("TOTAL COURTS: "+String.valueOf(courts.size()));
+    WaitingLimit.setText(String.valueOf(getMaxWaitingPlayers()));
+    
+    
 }
 
   private void refreshAll() {
+    queueManager.setMaxWaitingPlayers(getMaxWaitingPlayers());
     refreshWaitingPlayers();
-  }
+}
 
   private void log(String message) {
     String time = new java.text.SimpleDateFormat("HH:mm:ss").format(new java.util.Date());
@@ -128,7 +142,6 @@ public class MainDashboard extends JFrame {
     return null;
   }
 
-  /** Complete Game: 1) choose the winning team, 2) choose who continues, 3) rotate the queue. */
   private void completeGame(Court court) {
     List<Player> gamePlayers = activeGames.get(court);
     if (gamePlayers == null) {
@@ -137,40 +150,68 @@ public class MainDashboard extends JFrame {
     }
     int courtNumber = courts.indexOf(court) + 1;
 
-    // 1) winner popup
+    char team = askWinningTeam(courtNumber, gamePlayers);
+    if (team == 0) {return;}
+    List<Player> continuing = askWhoContinues(gamePlayers);
+    if (continuing == null) { return;}
+
+    List<Player> winners = recordResult(court, team, gamePlayers);
+    List<Player> noRoom = queueManager.completeGame(gamePlayers, continuing);
+
+    logGameResult(courtNumber, team, winners, gamePlayers, continuing, noRoom);
+    refreshAll();
+
+    if (!noRoom.isEmpty()) {
+        JOptionPane.showMessageDialog(this,
+            "The waiting queue is full ("
+            + queueManager.getMaxWaitingPlayers() + " players).\n"
+            + "These players could not rejoin and were removed: "
+            + names(noRoom));
+    }
+  }
+
+  private char askWinningTeam(int courtNumber, List<Player> gamePlayers) {
     winner winnerDialog = new winner(this, true);
     winnerDialog.setGame(courtNumber, gamePlayers);
     winnerDialog.setLocationRelativeTo(this);
     winnerDialog.setVisible(true);
-    char team = winnerDialog.getWinningTeam();
-    if (team == 0) {
-        return; // closed without choosing - game stays active
-    }
+    return winnerDialog.getWinningTeam();
+  }
 
-    // 2) who wants to play again?
-    ContinuingPlayer continueDialog = new ContinuingPlayer(this, true);
+  private List<Player> askWhoContinues(List<Player> gamePlayers) {
+    ContinuingPlayer continueDialog = new ContinuingPlayer(this,true,queueManager );
     continueDialog.setPlayers(gamePlayers);
     continueDialog.setLocationRelativeTo(this);
     continueDialog.setVisible(true);
+
     if (!continueDialog.isConfirmed()) {
-        return; // closed without confirming - game stays active
+        return null;
     }
 
-    List<Player> winners = new ArrayList<>(gamePlayers.subList(team == 'A' ? 0 : 2, team == 'A' ? 2 : 4));
     List<Player> continuing = new ArrayList<>();
+
     for (int i = 0; i < gamePlayers.size(); i++) {
-        if (continueDialog.wantsToContinue(i)) continuing.add(gamePlayers.get(i));
+        if (continueDialog.wantsToContinue(i)) {
+            continuing.add(gamePlayers.get(i));
+        }
     }
 
-    // 3) record result and rotate
+    return continuing;
+}
+
+  private List<Player> recordResult(Court court, char team, List<Player> gamePlayers) {
+    List<Player> winners = new ArrayList<>(gamePlayers.subList(team == 'A' ? 0 : 2, team == 'A' ? 2 : 4));
     for (Player p : winners) p.addWin();
     totalWinnersCount += winners.size();
     completedGamesCount++;
+    addWinnerRow(completedGamesCount, team, winners);
     activeGames.remove(court);
     court.clearPlayers();
+    return winners;
+  }
 
-    List<Player> noRoom = queueManager.completeGame(gamePlayers, continuing);
-
+  private void logGameResult(int courtNumber, char team, List<Player> winners,
+                             List<Player> gamePlayers, List<Player> continuing, List<Player> noRoom) {
     log("Court " + courtNumber + " - GAME COMPLETED. Team " + team + " won (" + names(winners) + ").");
     for (Player p : gamePlayers) {
         if (noRoom.contains(p)) {
@@ -182,24 +223,53 @@ public class MainDashboard extends JFrame {
             log(p.getName() + " (" + p.getId() + ") left the system.");
         }
     }
-    refreshAll();
+  }
 
-    if (!noRoom.isEmpty()) {
-        JOptionPane.showMessageDialog(this,
-            "The waiting queue is full (" + QueueManager.MAX_WAITING + " players).\n"
-            + "These players could not rejoin and were removed: " + names(noRoom));
+  private Court findAvailableCourt() {
+    for (Court court : courts) {
+        if (!activeGames.containsKey(court)) {
+            return court;
+        }
     }
+    return null;
+  }
+
+  /** Puts the 4 chosen players on the court and marks the court as busy. */
+  private void assignPlayersToCourt(Court court, List<Player> gamePlayers) {
+    court.setPlayers(gamePlayers);
+    activeGames.put(court, gamePlayers);
+    log("Court " + (courts.indexOf(court) + 1) + " - GAME STARTED: " + names(gamePlayers) + ".");
+  }
+
+  /** Shows the winning team of a finished game in the LIST OF WINNER table. */
+  private void addWinnerRow(int gameNo, char team, List<Player> winners) {
+    javax.swing.table.DefaultTableModel model = (javax.swing.table.DefaultTableModel) ListOfWinner.getModel();
+    Player p1 = winners.get(0);
+    Player p2 = winners.get(1);
+    Object[] row = { gameNo, "Team " + team, p1.getId(), p1.getName(), p2.getId(), p2.getName() };
+
+    int target = -1;
+    for (int i = 0; i < model.getRowCount(); i++) {
+        if (model.getValueAt(i, 0) == null) { target = i; break; }
+    }
+    if (target == -1) {
+        model.addRow(row);
+        target = model.getRowCount() - 1;
+    } else {
+        for (int c = 0; c < row.length; c++) model.setValueAt(row[c], target, c);
+    }
+    ListOfWinner.scrollRectToVisible(ListOfWinner.getCellRect(target, 0, true));
   }
 
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        jScrollPane3 = new javax.swing.JScrollPane();
+        scrollDashboard = new javax.swing.JScrollPane();
         jPanel3 = new javax.swing.JPanel();
         jPanel2 = new javax.swing.JPanel();
-        jLabel4 = new javax.swing.JLabel();
-        TotaWaitingPlayers = new javax.swing.JLabel();
+        jLabel13 = new javax.swing.JLabel();
+        WaitingLimit = new javax.swing.JLabel();
         jPanel4 = new javax.swing.JPanel();
         jLabel5 = new javax.swing.JLabel();
         ActiveCourt = new javax.swing.JLabel();
@@ -217,12 +287,22 @@ public class MainDashboard extends JFrame {
         jScrollPane5 = new javax.swing.JScrollPane();
         jTextArea5 = new javax.swing.JTextArea();
         jLabel9 = new javax.swing.JLabel();
-        scrollCourt = new javax.swing.JScrollPane();
+        scrollCourts = new javax.swing.JScrollPane();
         pnlCourt = new javax.swing.JPanel();
         jPanel1 = new javax.swing.JPanel();
         AddCourt = new javax.swing.JButton();
         jLabel10 = new javax.swing.JLabel();
         delete = new javax.swing.JButton();
+        jPanel9 = new javax.swing.JPanel();
+        jLabel11 = new javax.swing.JLabel();
+        NonActiveCourt = new javax.swing.JLabel();
+        jPanel11 = new javax.swing.JPanel();
+        jLabel4 = new javax.swing.JLabel();
+        TotaWaitingPlayers = new javax.swing.JLabel();
+        jPanel12 = new javax.swing.JPanel();
+        jScrollPane3 = new javax.swing.JScrollPane();
+        ListOfWinner = new javax.swing.JTable();
+        jLabel12 = new javax.swing.JLabel();
         navbar = new javax.swing.JPanel();
         Register = new javax.swing.JButton();
         jLabel1 = new javax.swing.JLabel();
@@ -233,50 +313,51 @@ public class MainDashboard extends JFrame {
         jLabel2 = new javax.swing.JLabel();
         jPanel13 = new javax.swing.JPanel();
         jLabel3 = new javax.swing.JLabel();
-        jScrollPane2 = new javax.swing.JScrollPane();
+        scrollWaitingPlayers = new javax.swing.JScrollPane();
         WaitingPlayers = new javax.swing.JTextArea();
         logout = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
-        jScrollPane3.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollDashboard.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 
         jPanel3.setBackground(new java.awt.Color(204, 204, 204));
+        jPanel3.setPreferredSize(new java.awt.Dimension(972, 1022));
 
-        jPanel2.setBackground(new java.awt.Color(153, 153, 153));
+        jPanel2.setBackground(new java.awt.Color(0, 153, 153));
         jPanel2.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255)));
+        jPanel2.setPreferredSize(new java.awt.Dimension(140, 44));
 
-        jLabel4.setText("WAITING PLAYERS");
+        jLabel13.setText("WAITING LIMIT");
 
-        TotaWaitingPlayers.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
-        TotaWaitingPlayers.setText("0");
+        WaitingLimit.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        WaitingLimit.setText("0");
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
-                .addContainerGap(51, Short.MAX_VALUE)
+                .addGap(8, 8, 8)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
-                        .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 116, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(43, 43, 43))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
-                        .addComponent(TotaWaitingPlayers, javax.swing.GroupLayout.PREFERRED_SIZE, 62, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(52, 52, 52))))
+                    .addComponent(jLabel13)
+                    .addComponent(WaitingLimit, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(0, 30, Short.MAX_VALUE))
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
-                .addComponent(jLabel4)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(TotaWaitingPlayers)
-                .addGap(0, 0, Short.MAX_VALUE))
+                .addGap(2, 2, 2)
+                .addComponent(jLabel13)
+                .addGap(0, 0, 0)
+                .addComponent(WaitingLimit)
+                .addGap(0, 4, Short.MAX_VALUE))
         );
 
-        jPanel4.setBackground(new java.awt.Color(153, 153, 153));
+        jPanel4.setBackground(new java.awt.Color(153, 255, 153));
         jPanel4.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255)));
+        jPanel4.setPreferredSize(new java.awt.Dimension(140, 44));
 
         jLabel5.setText("ACTIVE COURT");
 
@@ -287,24 +368,26 @@ public class MainDashboard extends JFrame {
         jPanel4.setLayout(jPanel4Layout);
         jPanel4Layout.setHorizontalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
-                .addContainerGap(64, Short.MAX_VALUE)
-                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(ActiveCourt, javax.swing.GroupLayout.PREFERRED_SIZE, 62, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel5, javax.swing.GroupLayout.PREFERRED_SIZE, 98, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(48, 48, 48))
+            .addGroup(jPanel4Layout.createSequentialGroup()
+                .addGap(8, 8, 8)
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel5)
+                    .addComponent(ActiveCourt, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(0, 30, Short.MAX_VALUE))
         );
         jPanel4Layout.setVerticalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel4Layout.createSequentialGroup()
+                .addGap(2, 2, 2)
                 .addComponent(jLabel5)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGap(0, 0, 0)
                 .addComponent(ActiveCourt)
-                .addGap(0, 0, Short.MAX_VALUE))
+                .addGap(0, 4, Short.MAX_VALUE))
         );
 
         jPanel5.setBackground(new java.awt.Color(153, 153, 153));
         jPanel5.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255)));
+        jPanel5.setPreferredSize(new java.awt.Dimension(140, 44));
 
         jLabel6.setText("COMPLETED GAMES");
 
@@ -315,24 +398,26 @@ public class MainDashboard extends JFrame {
         jPanel5.setLayout(jPanel5Layout);
         jPanel5Layout.setHorizontalGroup(
             jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel5Layout.createSequentialGroup()
-                .addContainerGap(46, Short.MAX_VALUE)
-                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(CompletedGames, javax.swing.GroupLayout.PREFERRED_SIZE, 71, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 124, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(40, 40, 40))
+            .addGroup(jPanel5Layout.createSequentialGroup()
+                .addGap(8, 8, 8)
+                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel6)
+                    .addComponent(CompletedGames, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(0, 21, Short.MAX_VALUE))
         );
         jPanel5Layout.setVerticalGroup(
             jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel5Layout.createSequentialGroup()
+                .addGap(2, 2, 2)
                 .addComponent(jLabel6)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGap(0, 0, 0)
                 .addComponent(CompletedGames)
-                .addGap(0, 0, Short.MAX_VALUE))
+                .addGap(0, 4, Short.MAX_VALUE))
         );
 
-        jPanel6.setBackground(new java.awt.Color(153, 153, 153));
+        jPanel6.setBackground(new java.awt.Color(255, 204, 0));
         jPanel6.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255)));
+        jPanel6.setPreferredSize(new java.awt.Dimension(140, 44));
 
         jLabel7.setText("TOTAL WINNER");
 
@@ -344,53 +429,55 @@ public class MainDashboard extends JFrame {
         jPanel6Layout.setHorizontalGroup(
             jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel6Layout.createSequentialGroup()
-                .addContainerGap(60, Short.MAX_VALUE)
+                .addGap(8, 8, 8)
                 .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel6Layout.createSequentialGroup()
-                        .addComponent(jLabel7, javax.swing.GroupLayout.PREFERRED_SIZE, 101, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(49, 49, 49))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel6Layout.createSequentialGroup()
-                        .addComponent(TotalWinner, javax.swing.GroupLayout.PREFERRED_SIZE, 51, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(62, 62, 62))))
+                    .addComponent(jLabel7)
+                    .addComponent(TotalWinner, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(0, 30, Short.MAX_VALUE))
         );
         jPanel6Layout.setVerticalGroup(
             jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel6Layout.createSequentialGroup()
-                .addComponent(jLabel7, javax.swing.GroupLayout.PREFERRED_SIZE, 16, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGap(2, 2, 2)
+                .addComponent(jLabel7)
+                .addGap(0, 0, 0)
                 .addComponent(TotalWinner)
-                .addGap(0, 16, Short.MAX_VALUE))
+                .addGap(0, 4, Short.MAX_VALUE))
         );
 
+        jPanel7.setBackground(new java.awt.Color(204, 204, 204));
+
+        jTextArea4.setEditable(false);
         jTextArea4.setBackground(new java.awt.Color(102, 102, 102));
         jTextArea4.setColumns(20);
+        jTextArea4.setForeground(new java.awt.Color(255, 255, 255));
         jTextArea4.setRows(5);
         jScrollPane1.setViewportView(jTextArea4);
 
         jLabel8.setFont(new java.awt.Font("Segoe UI Black", 1, 12)); // NOI18N
-        jLabel8.setText("NEXT 4 ELIGIBBLE");
+        jLabel8.setText("NEXT 4 ELIGIBLE");
 
         javax.swing.GroupLayout jPanel7Layout = new javax.swing.GroupLayout(jPanel7);
         jPanel7.setLayout(jPanel7Layout);
         jPanel7Layout.setHorizontalGroup(
             jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 255, Short.MAX_VALUE)
-            .addGroup(jPanel7Layout.createSequentialGroup()
-                .addGap(20, 20, 20)
-                .addComponent(jLabel8, javax.swing.GroupLayout.PREFERRED_SIZE, 114, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 270, Short.MAX_VALUE)
+            .addComponent(jLabel8)
         );
         jPanel7Layout.setVerticalGroup(
             jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel7Layout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addGroup(jPanel7Layout.createSequentialGroup()
                 .addComponent(jLabel8)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 230, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(4, 4, 4)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 230, Short.MAX_VALUE))
         );
 
+        jPanel10.setBackground(new java.awt.Color(204, 204, 204));
+
+        jTextArea5.setEditable(false);
         jTextArea5.setBackground(new java.awt.Color(102, 102, 102));
         jTextArea5.setColumns(20);
+        jTextArea5.setForeground(new java.awt.Color(255, 255, 255));
         jTextArea5.setRows(5);
         jScrollPane5.setViewportView(jTextArea5);
 
@@ -401,26 +488,22 @@ public class MainDashboard extends JFrame {
         jPanel10.setLayout(jPanel10Layout);
         jPanel10Layout.setHorizontalGroup(
             jPanel10Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane5)
-            .addGroup(jPanel10Layout.createSequentialGroup()
-                .addGap(35, 35, 35)
-                .addComponent(jLabel9, javax.swing.GroupLayout.PREFERRED_SIZE, 118, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addComponent(jScrollPane5, javax.swing.GroupLayout.DEFAULT_SIZE, 612, Short.MAX_VALUE)
+            .addComponent(jLabel9)
         );
         jPanel10Layout.setVerticalGroup(
             jPanel10Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel10Layout.createSequentialGroup()
-                .addGap(0, 0, Short.MAX_VALUE)
+            .addGroup(jPanel10Layout.createSequentialGroup()
                 .addComponent(jLabel9)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane5, javax.swing.GroupLayout.PREFERRED_SIZE, 228, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(4, 4, 4)
+                .addComponent(jScrollPane5, javax.swing.GroupLayout.DEFAULT_SIZE, 230, Short.MAX_VALUE))
         );
 
-        scrollCourt.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
+        scrollCourts.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
 
         pnlCourt.setBackground(new java.awt.Color(204, 204, 204));
         pnlCourt.setPreferredSize(new java.awt.Dimension(231, 258));
-        scrollCourt.setViewportView(pnlCourt);
+        scrollCourts.setViewportView(pnlCourt);
 
         jPanel1.setBackground(new java.awt.Color(204, 204, 204));
         jPanel1.setBorder(javax.swing.BorderFactory.createEtchedBorder());
@@ -432,7 +515,7 @@ public class MainDashboard extends JFrame {
         AddCourt.addActionListener(this::AddCourtActionPerformed);
 
         jLabel10.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
-        jLabel10.setText("COURTS");
+        jLabel10.setText("TOTAL COURTS : ");
 
         delete.setBackground(new java.awt.Color(204, 51, 0));
         delete.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
@@ -444,68 +527,190 @@ public class MainDashboard extends JFrame {
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jLabel10, javax.swing.GroupLayout.PREFERRED_SIZE, 88, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 570, Short.MAX_VALUE)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addGap(8, 8, 8)
+                .addComponent(jLabel10)
+                .addGap(0, 537, Short.MAX_VALUE)
                 .addComponent(AddCourt, javax.swing.GroupLayout.PREFERRED_SIZE, 111, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(delete))
+                .addGap(6, 6, 6)
+                .addComponent(delete, javax.swing.GroupLayout.PREFERRED_SIZE, 111, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(8, 8, 8))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                .addComponent(jLabel10)
-                .addComponent(delete, javax.swing.GroupLayout.PREFERRED_SIZE, 29, javax.swing.GroupLayout.PREFERRED_SIZE))
-            .addComponent(AddCourt, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addGap(0, 1, Short.MAX_VALUE)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.CENTER)
+                    .addComponent(jLabel10)
+                    .addComponent(AddCourt, javax.swing.GroupLayout.PREFERRED_SIZE, 29, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(delete, javax.swing.GroupLayout.PREFERRED_SIZE, 29, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(0, 1, Short.MAX_VALUE))
+        );
+
+        jPanel9.setBackground(new java.awt.Color(255, 102, 102));
+        jPanel9.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255)));
+        jPanel9.setPreferredSize(new java.awt.Dimension(140, 44));
+
+        jLabel11.setText("NON ACTIVE COURT");
+
+        NonActiveCourt.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        NonActiveCourt.setText("0");
+
+        javax.swing.GroupLayout jPanel9Layout = new javax.swing.GroupLayout(jPanel9);
+        jPanel9.setLayout(jPanel9Layout);
+        jPanel9Layout.setHorizontalGroup(
+            jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel9Layout.createSequentialGroup()
+                .addGap(8, 8, 8)
+                .addGroup(jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel11)
+                    .addComponent(NonActiveCourt, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(0, 21, Short.MAX_VALUE))
+        );
+        jPanel9Layout.setVerticalGroup(
+            jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel9Layout.createSequentialGroup()
+                .addGap(2, 2, 2)
+                .addComponent(jLabel11)
+                .addGap(0, 0, 0)
+                .addComponent(NonActiveCourt)
+                .addGap(0, 4, Short.MAX_VALUE))
+        );
+
+        jPanel11.setBackground(new java.awt.Color(153, 153, 255));
+        jPanel11.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255)));
+        jPanel11.setPreferredSize(new java.awt.Dimension(140, 44));
+
+        jLabel4.setText("WAITING PLAYERS");
+
+        TotaWaitingPlayers.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        TotaWaitingPlayers.setText("0");
+
+        javax.swing.GroupLayout jPanel11Layout = new javax.swing.GroupLayout(jPanel11);
+        jPanel11.setLayout(jPanel11Layout);
+        jPanel11Layout.setHorizontalGroup(
+            jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel11Layout.createSequentialGroup()
+                .addGap(8, 8, 8)
+                .addGroup(jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel4)
+                    .addComponent(TotaWaitingPlayers, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(0, 30, Short.MAX_VALUE))
+        );
+        jPanel11Layout.setVerticalGroup(
+            jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel11Layout.createSequentialGroup()
+                .addGap(2, 2, 2)
+                .addComponent(jLabel4)
+                .addGap(0, 0, 0)
+                .addComponent(TotaWaitingPlayers)
+                .addGap(0, 4, Short.MAX_VALUE))
+        );
+
+        jPanel12.setBackground(new java.awt.Color(204, 204, 204));
+
+        ListOfWinner.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null, null, null},
+                {null, null, null, null, null, null},
+                {null, null, null, null, null, null},
+                {null, null, null, null, null, null}
+            },
+            new String [] {
+                "No", "TEAM", "PLAYER 1 ID", "PLAYER 1 NAME", "PLAYER 2 ID", "PLAYER 2 NAME"
+            }
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false, false, false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        jScrollPane3.setViewportView(ListOfWinner);
+        if (ListOfWinner.getColumnModel().getColumnCount() > 0) {
+            ListOfWinner.getColumnModel().getColumn(0).setPreferredWidth(40);
+            ListOfWinner.getColumnModel().getColumn(1).setPreferredWidth(80);
+            ListOfWinner.getColumnModel().getColumn(2).setPreferredWidth(120);
+            ListOfWinner.getColumnModel().getColumn(3).setPreferredWidth(200);
+            ListOfWinner.getColumnModel().getColumn(4).setPreferredWidth(120);
+            ListOfWinner.getColumnModel().getColumn(5).setPreferredWidth(200);
+        }
+
+        jLabel12.setFont(new java.awt.Font("Segoe UI Black", 1, 14)); // NOI18N
+        jLabel12.setText("LIST OF WINNER");
+
+        javax.swing.GroupLayout jPanel12Layout = new javax.swing.GroupLayout(jPanel12);
+        jPanel12.setLayout(jPanel12Layout);
+        jPanel12Layout.setHorizontalGroup(
+            jPanel12Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 900, Short.MAX_VALUE)
+            .addComponent(jLabel12)
+        );
+        jPanel12Layout.setVerticalGroup(
+            jPanel12Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel12Layout.createSequentialGroup()
+                .addComponent(jLabel12)
+                .addGap(4, 4, 4)
+                .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 256, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
         jPanel3.setLayout(jPanel3Layout);
         jPanel3Layout.setHorizontalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel3Layout.createSequentialGroup()
-                .addGap(49, 49, 49)
-                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
+                .addContainerGap(69, Short.MAX_VALUE)
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel3Layout.createSequentialGroup()
                         .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addGap(12, 12, 12)
+                        .addComponent(jPanel11, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(12, 12, 12)
                         .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGap(12, 12, 12)
+                        .addComponent(jPanel9, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(12, 12, 12)
                         .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(26, 26, 26)
+                        .addGap(12, 12, 12)
                         .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(scrollCourts, javax.swing.GroupLayout.PREFERRED_SIZE, 900, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(jPanel3Layout.createSequentialGroup()
                         .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(18, 18, 18)
-                        .addComponent(jPanel10, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addComponent(scrollCourt)
-                    .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(110, Short.MAX_VALUE))
+                        .addComponent(jPanel10, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jPanel12, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(37, 37, 37))
         );
         jPanel3Layout.setVerticalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel3Layout.createSequentialGroup()
-                .addGap(19, 19, 19)
-                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jPanel2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jPanel4, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGap(20, 20, 20)
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jPanel11, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jPanel9, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGap(20, 20, 20)
                 .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(scrollCourt, javax.swing.GroupLayout.PREFERRED_SIZE, 308, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jPanel10, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(59, Short.MAX_VALUE))
+                .addGap(5, 5, 5)
+                .addComponent(scrollCourts, javax.swing.GroupLayout.PREFERRED_SIZE, 308, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(20, 20, 20)
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jPanel10, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(20, 20, 20)
+                .addComponent(jPanel12, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(0, 59, Short.MAX_VALUE))
         );
 
-        jScrollPane3.setViewportView(jPanel3);
+        scrollDashboard.setViewportView(jPanel3);
 
-        getContentPane().add(jScrollPane3, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 0, 990, 670));
+        getContentPane().add(scrollDashboard, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 0, 1000, 700));
 
         navbar.setBackground(new java.awt.Color(51, 51, 51));
 
@@ -532,15 +737,15 @@ public class MainDashboard extends JFrame {
             jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel8Layout.createSequentialGroup()
                 .addGap(14, 14, 14)
-                .addComponent(StartGame, javax.swing.GroupLayout.PREFERRED_SIZE, 164, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(22, Short.MAX_VALUE))
+                .addComponent(StartGame, javax.swing.GroupLayout.PREFERRED_SIZE, 168, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(0, 0, Short.MAX_VALUE))
         );
         jPanel8Layout.setVerticalGroup(
             jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel8Layout.createSequentialGroup()
-                .addContainerGap()
+                .addGap(6, 6, 6)
                 .addComponent(StartGame, javax.swing.GroupLayout.PREFERRED_SIZE, 47, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addGap(0, 6, Short.MAX_VALUE))
         );
 
         PlayerId.addActionListener(this::PlayerIdActionPerformed);
@@ -570,7 +775,7 @@ public class MainDashboard extends JFrame {
         WaitingPlayers.setRows(5);
         WaitingPlayers.setBorder(javax.swing.BorderFactory.createEtchedBorder(javax.swing.border.EtchedBorder.RAISED));
         WaitingPlayers.setRequestFocusEnabled(false);
-        jScrollPane2.setViewportView(WaitingPlayers);
+        scrollWaitingPlayers.setViewportView(WaitingPlayers);
 
         logout.setBackground(new java.awt.Color(102, 0, 0));
         logout.setFont(new java.awt.Font("Arial Black", 1, 12)); // NOI18N
@@ -583,85 +788,84 @@ public class MainDashboard extends JFrame {
         jPanel13Layout.setHorizontalGroup(
             jPanel13Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel13Layout.createSequentialGroup()
+                .addGap(14, 14, 14)
                 .addGroup(jPanel13Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(jPanel13Layout.createSequentialGroup()
-                        .addGap(37, 37, 37)
-                        .addComponent(jLabel3)
-                        .addGap(0, 0, Short.MAX_VALUE))
-                    .addGroup(jPanel13Layout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE))
-                    .addGroup(jPanel13Layout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(logout, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-                .addContainerGap())
+                    .addComponent(jLabel3)
+                    .addComponent(scrollWaitingPlayers)
+                    .addComponent(logout, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addGap(14, 14, 14))
         );
         jPanel13Layout.setVerticalGroup(
             jPanel13Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel13Layout.createSequentialGroup()
-                .addContainerGap()
+                .addGap(8, 8, 8)
                 .addComponent(jLabel3)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 304, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(logout, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addGap(6, 6, 6)
+                .addComponent(scrollWaitingPlayers, javax.swing.GroupLayout.DEFAULT_SIZE, 405, Short.MAX_VALUE)
+                .addGap(12, 12, 12)
+                .addComponent(logout, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(10, 10, 10))
         );
 
         javax.swing.GroupLayout navbarLayout = new javax.swing.GroupLayout(navbar);
         navbar.setLayout(navbarLayout);
         navbarLayout.setHorizontalGroup(
             navbarLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel8, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(jPanel8, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(jPanel13, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addGroup(navbarLayout.createSequentialGroup()
                 .addGap(16, 16, 16)
-                .addGroup(navbarLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addGroup(navbarLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addComponent(jLabel1)
-                        .addComponent(Register, javax.swing.GroupLayout.PREFERRED_SIZE, 164, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGroup(navbarLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel1)
+                    .addComponent(Register, javax.swing.GroupLayout.PREFERRED_SIZE, 168, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel2)
                     .addGroup(navbarLayout.createSequentialGroup()
-                        .addComponent(jLabel2)
-                        .addGap(78, 78, 78))
-                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, navbarLayout.createSequentialGroup()
-                        .addComponent(PlayerId, javax.swing.GroupLayout.PREFERRED_SIZE, 85, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(PlayerId, javax.swing.GroupLayout.PREFERRED_SIZE, 90, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(6, 6, 6)
                         .addComponent(Leave, javax.swing.GroupLayout.PREFERRED_SIZE, 72, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .addComponent(jPanel13, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGap(0, 0, Short.MAX_VALUE))
         );
         navbarLayout.setVerticalGroup(
             navbarLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(navbarLayout.createSequentialGroup()
-                .addGap(23, 23, 23)
+                .addGap(20, 20, 20)
                 .addComponent(jLabel1)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGap(6, 6, 6)
                 .addComponent(Register, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(31, 31, 31)
+                .addGap(20, 20, 20)
                 .addComponent(jPanel8, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGap(20, 20, 20)
                 .addComponent(jLabel2)
                 .addGap(4, 4, 4)
-                .addGroup(navbarLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(PlayerId)
-                    .addComponent(Leave, javax.swing.GroupLayout.DEFAULT_SIZE, 34, Short.MAX_VALUE))
-                .addGap(18, 18, 18)
+                .addGroup(navbarLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(PlayerId, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(Leave, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(20, 20, 20)
                 .addComponent(jPanel13, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
-        getContentPane().add(navbar, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, -1, -1));
+        getContentPane().add(navbar, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 200, 700));
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
     private void RegisterActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_RegisterActionPerformed
-        register dialog = new register(this, true, queueManager);
-        dialog.setLocationRelativeTo(this);
-        dialog.setVisible(true);
+       if (queueManager.isQueueFull()) {
+        JOptionPane.showMessageDialog(this,
+            "The waiting queue is full!\nMaximum capacity: "
+            + queueManager.getMaxWaitingPlayers() + " players.",
+            "Queue Full",
+            JOptionPane.WARNING_MESSAGE);
+        return;
+    }
 
-        Player added = dialog.getRegisteredPlayer();
-        if (added != null) {
-            log("Registered " + added.getName() + " (" + added.getId() + ").");
-        }
-        refreshWaitingPlayers();
+    register dialog = new register(this, true, queueManager);
+    dialog.setLocationRelativeTo(this);
+    dialog.setVisible(true);
+    Player added = dialog.getRegisteredPlayer();
+
+    if (added != null) {log("Registered " + added.getName() + " (" + added.getId() + ")."); }
+    
+    refreshWaitingPlayers();
     }//GEN-LAST:event_RegisterActionPerformed
 
     private void StartGameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_StartGameActionPerformed
@@ -672,35 +876,21 @@ public class MainDashboard extends JFrame {
     }
     if (queueManager.countEligible() < QueueManager.PLAYERS_PER_GAME) {
         JOptionPane.showMessageDialog(this,"Not enough eligible players! Some waiting players must skip this game selection.");
-        return;
-    }
+        return;}
 
-    Court availableCourt = null;
-
-    for (Court court : courts) {
-        if (!activeGames.containsKey(court)) {
-            availableCourt = court;
-            break;
-        }
-    }
-
-    // Check if there is an available court
+    Court availableCourt = findAvailableCourt();
     if (availableCourt == null) {
         JOptionPane.showMessageDialog(this,"There are no available courts!");
-        return;
-    }
-    List<Player> gamePlayers = queueManager.selectPlayersForGame();
-    availableCourt.setPlayers(gamePlayers);
-    activeGames.put(availableCourt, gamePlayers);
-    log("Court " + (courts.indexOf(availableCourt) + 1) + " - GAME STARTED: " + names(gamePlayers) + ".");
+        return;}
+    assignPlayersToCourt(availableCourt, queueManager.selectPlayersForGame());
     refreshWaitingPlayers();
-    
+
     JOptionPane.showMessageDialog(this,"Game started successfully!");
     
     }//GEN-LAST:event_StartGameActionPerformed
 
     private void PlayerIdActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_PlayerIdActionPerformed
-        // TODO add your handling code here:
+
     }//GEN-LAST:event_PlayerIdActionPerformed
 
     private void LeaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_LeaveActionPerformed
@@ -710,7 +900,6 @@ public class MainDashboard extends JFrame {
             return;
         }
 
-        // waiting player: remove from the queue (everyone else keeps their order)
         Player removed = queueManager.leaveQueue(id);
         if (removed != null) {
             log(removed.getName() + " (" + removed.getId() + ") left the queue.");
@@ -719,7 +908,6 @@ public class MainDashboard extends JFrame {
             return;
         }
 
-        // currently playing: leaves once the game is finished
         Player playing = findActivePlayer(id);
         if (playing != null) {
             if (playing.isLeaveAfterGame()) {
@@ -742,30 +930,50 @@ public class MainDashboard extends JFrame {
     }//GEN-LAST:event_AddCourtActionPerformed
 
     private void deleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteActionPerformed
-      if (courts.isEmpty()) {
-        JOptionPane.showMessageDialog(this,"There are no courts to delete!","Delete Court", JOptionPane.WARNING_MESSAGE);
+      if (courts.size() <= 1) {
+        JOptionPane.showMessageDialog(this, "You must keep at least one court.",
+                "Delete Court",JOptionPane.WARNING_MESSAGE);
         return;
     }
 
-    if (activeGames.containsKey(courts.get(courts.size() - 1))) {
-        JOptionPane.showMessageDialog(this,"The last court has a game in progress. Complete the game first!", "Delete Court",JOptionPane.WARNING_MESSAGE );
+    Court lastCourt = courts.get(courts.size() - 1);
+
+    if (activeGames.containsKey(lastCourt)) { JOptionPane.showMessageDialog(this,
+                "The last court has a game in progress. Complete the game first!",
+                "Delete Court",
+                JOptionPane.WARNING_MESSAGE);
         return;
     }
 
-    int confirm = JOptionPane.showConfirmDialog(this,"Are you sure you want to delete the last court?","Confirm Delete",JOptionPane.YES_NO_OPTION);
+    int confirm = JOptionPane.showConfirmDialog(this,"Are you sure you want to delete the last court?",
+            "Confirm Delete",
+            JOptionPane.YES_NO_OPTION);
+
     if (confirm == JOptionPane.YES_OPTION) {
-        courts.remove(courts.size() - 1);
+        courts.remove(lastCourt);
+
         refreshCourtPanel();
+        refreshAll();
+
         log("Last court deleted. " + courts.size() + " court(s) remaining.");
+        int maxWaiting = getMaxWaitingPlayers();
+        int currentWaiting = queueManager.getPlayerQueue().size();
+
+        if (currentWaiting > maxWaiting) {
+            JOptionPane.showMessageDialog(this,
+                    "The waiting queue currently has " + currentWaiting
+                    + " players, but the new limit is " + maxWaiting
+                    + ". New registrations will be restricted until the queue decreases.");
+        }
     }
     }//GEN-LAST:event_deleteActionPerformed
 
     private void logoutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_logoutActionPerformed
         int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to logout?",
         "Logout", JOptionPane.YES_NO_OPTION);
-    if (confirm == JOptionPane.YES_OPTION) {
-       new LoginPage().setVisible(true);
-    this.dispose();
+        if (confirm == JOptionPane.YES_OPTION) {
+           new LoginPage().setVisible(true);
+        this.dispose();
        
     }
     }//GEN-LAST:event_logoutActionPerformed
@@ -773,23 +981,97 @@ public class MainDashboard extends JFrame {
 private void addCourt() {
     Court court = new Court();
     courts.add(court);
+
     refreshCourtPanel();
+    refreshAll();
 }
 
+private void customizeScrollBar(JScrollPane scrollPane) {
+
+    JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
+
+    verticalBar.setPreferredSize(new Dimension(12, 0));
+    verticalBar.setUI(new BasicScrollBarUI() {
+
+        @Override
+        protected void configureScrollBarColors() {
+            thumbColor = new Color(160, 160, 160);
+            trackColor = new Color(220, 220, 220);
+        }
+
+        @Override
+        protected JButton createDecreaseButton(int orientation) {
+            return createZeroButton();
+        }
+
+        @Override
+        protected JButton createIncreaseButton(int orientation) {
+            return createZeroButton();
+        }
+
+        private JButton createZeroButton() {
+            JButton button = new JButton();
+            button.setPreferredSize(new Dimension(0, 0));
+            button.setMinimumSize(new Dimension(0, 0));
+            button.setMaximumSize(new Dimension(0, 0));
+            return button;
+        }
+
+        @Override
+        protected void paintTrack(Graphics g, JComponent c, Rectangle trackBounds) {
+            g.setColor(new Color(220, 220, 220));
+            g.fillRect(trackBounds.x, trackBounds.y,
+                    trackBounds.width, trackBounds.height);
+        }
+
+        @Override
+        protected void paintThumb(Graphics g, JComponent c, Rectangle thumbBounds) {
+            if (thumbBounds.isEmpty() || !scrollbar.isEnabled()) {
+                return;
+            }
+
+            Graphics2D g2 = (Graphics2D) g.create();
+
+            g2.setRenderingHint(
+                    RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON
+            );
+
+            g2.setColor(new Color(160, 160, 160));
+
+            g2.fillRoundRect(
+                    thumbBounds.x + 2,
+                    thumbBounds.y,
+                    thumbBounds.width - 4,
+                    thumbBounds.height,
+                    10,
+                    10
+            );
+
+            g2.dispose();
+        }
+    });
+}
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLabel ActiveCourt;
     private javax.swing.JButton AddCourt;
     private javax.swing.JLabel CompletedGames;
     private javax.swing.JButton Leave;
+    private javax.swing.JTable ListOfWinner;
+    private javax.swing.JLabel NonActiveCourt;
     private javax.swing.JTextField PlayerId;
     private javax.swing.JButton Register;
     private javax.swing.JButton StartGame;
     private javax.swing.JLabel TotaWaitingPlayers;
     private javax.swing.JLabel TotalWinner;
+    private javax.swing.JLabel WaitingLimit;
     private javax.swing.JTextArea WaitingPlayers;
     private javax.swing.JButton delete;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel10;
+    private javax.swing.JLabel jLabel11;
+    private javax.swing.JLabel jLabel12;
+    private javax.swing.JLabel jLabel13;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
@@ -800,6 +1082,8 @@ private void addCourt() {
     private javax.swing.JLabel jLabel9;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel10;
+    private javax.swing.JPanel jPanel11;
+    private javax.swing.JPanel jPanel12;
     private javax.swing.JPanel jPanel13;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
@@ -808,8 +1092,8 @@ private void addCourt() {
     private javax.swing.JPanel jPanel6;
     private javax.swing.JPanel jPanel7;
     private javax.swing.JPanel jPanel8;
+    private javax.swing.JPanel jPanel9;
     private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JScrollPane jScrollPane5;
     private javax.swing.JTextArea jTextArea4;
@@ -817,6 +1101,8 @@ private void addCourt() {
     private javax.swing.JButton logout;
     private javax.swing.JPanel navbar;
     private javax.swing.JPanel pnlCourt;
-    private javax.swing.JScrollPane scrollCourt;
+    private javax.swing.JScrollPane scrollCourts;
+    private javax.swing.JScrollPane scrollDashboard;
+    private javax.swing.JScrollPane scrollWaitingPlayers;
     // End of variables declaration//GEN-END:variables
 }

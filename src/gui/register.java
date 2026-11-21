@@ -12,7 +12,6 @@ public class register extends javax.swing.JDialog {
     private QueueManager queueManager;
     private Player registeredPlayer = null;
 
-    /** The player that was just registered, or null if the dialog was cancelled. */
     public Player getRegisteredPlayer() {
         return registeredPlayer;
     }
@@ -150,13 +149,7 @@ public class register extends javax.swing.JDialog {
 
     QueueManager.RegisterResult result = queueManager.registerPlayer(player);
     if (result == QueueManager.RegisterResult.DUPLICATE) {
-        JOptionPane.showMessageDialog(this, "Player ID already exists!");
-        return;
-    }
-    if (result == QueueManager.RegisterResult.QUEUE_FULL) {
-        JOptionPane.showMessageDialog(this,
-            "The waiting queue is full! (Maximum of " + QueueManager.MAX_WAITING + " waiting players)");
-        return;
+        JOptionPane.showMessageDialog(this, "Player ID already exists!"); return;
     }
     registeredPlayer = player;
 

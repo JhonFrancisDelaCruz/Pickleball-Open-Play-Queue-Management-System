@@ -1,48 +1,77 @@
 
 package gui;
+
+import javax.swing.JOptionPane;
+import service.QueueManager;
+
 public class ContinuingPlayer extends javax.swing.JDialog {
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(ContinuingPlayer.class.getName());
-    public ContinuingPlayer(java.awt.Frame parent, boolean modal) {
-        super(parent, modal);
-        initComponents();
-        setTitle("Continue Playing?");
-        setResizable(false);
-        // the Yes/No toggle buttons are narrow - remove inner margins so "Yes" is not shown as "..."
-        for (javax.swing.JButton b : buttons()) {
-            b.setMargin(new java.awt.Insets(0, 0, 0, 0));
-            java.awt.Dimension size = new java.awt.Dimension(52, b.getPreferredSize().height);
-            b.setPreferredSize(size);
-            b.setMinimumSize(size);
-            b.setMaximumSize(size);
-        }
-        pack();
+    private QueueManager queue;
+    private java.util.List<model.Player> currentGamePlayers;
+    
+    public ContinuingPlayer(java.awt.Frame parent,boolean modal, QueueManager queue) {
+    super(parent, modal);
+    this.queue = queue;
+    
+    initComponents();
+
+    setTitle("Continue Playing?");
+    setResizable(false);
+
+    for (javax.swing.JButton b : buttons()) {
+        b.setMargin(new java.awt.Insets(0, 0, 0, 0));
+        java.awt.Dimension size = new java.awt.Dimension(52, b.getPreferredSize().height);
+
+        b.setPreferredSize(size);
+        b.setMinimumSize(size);
+        b.setMaximumSize(size);
     }
+
+    pack();
+}
 
     private final boolean[] continuing = new boolean[4];
     private boolean confirmed = false;
 
     private javax.swing.JButton[] buttons() {
-        return new javax.swing.JButton[] { Button1, Button2, Button3, Button4 };
-    }
+        return new javax.swing.JButton[] { Button1, Button2, Button3, Button4 };}
 
     private javax.swing.JLabel[] labels() {
         return new javax.swing.JLabel[] { Player1, Player2, Player3, Player4 };
     }
 
     public void setPlayers(java.util.List<model.Player> players) {
-        for (int i = 0; i < 4; i++) {
-            model.Player p = players.get(i);
-            continuing[i] = false;
-            labels()[i].setText(p.getId() + " - " + p.getName() + (p.isLeaveAfterGame() ? " (leaving)" : ""));
-            buttons()[i].setEnabled(!p.isLeaveAfterGame());
-            refreshButton(i);
+    this.currentGamePlayers = players;
+
+    for (int i = 0; i < 4; i++) {
+        model.Player p = players.get(i);
+        continuing[i] = false;
+        
+        labels()[i].setText( p.getId() + " - " + p.getName() + (p.isLeaveAfterGame() ? " (leaving)" : ""));
+        buttons()[i].setEnabled(!p.isLeaveAfterGame());
+        refreshButton(i);
+    }
+}
+
+    private void toggle(int i) {
+
+    if (!continuing[i]) {
+        int selectedCount = 0;
+        for (boolean selected : continuing) {
+            if (selected) { selectedCount++;}
+        }
+        int availableSlots = queue.getAvailableSlotsAfterGame(currentGamePlayers);
+
+        if (selectedCount >= availableSlots) {
+            JOptionPane.showMessageDialog( this,"The waiting queue is full!\n"+ 
+                    "Available slots: " + availableSlots,"Waiting Queue Full",JOptionPane.WARNING_MESSAGE);
+            return;
         }
     }
 
-    private void toggle(int i) {
-        continuing[i] = !continuing[i];
-        refreshButton(i);
-    }
+    continuing[i] = !continuing[i];
+    refreshButton(i);
+}
 
     private void refreshButton(int i) {
         javax.swing.JButton b = buttons()[i];
@@ -279,6 +308,7 @@ public class ContinuingPlayer extends javax.swing.JDialog {
 
     private void Button3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Button3ActionPerformed
         toggle(2);
+
     }//GEN-LAST:event_Button3ActionPerformed
 
     private void Button1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Button1ActionPerformed
@@ -299,11 +329,10 @@ public class ContinuingPlayer extends javax.swing.JDialog {
     }//GEN-LAST:event_ConfirmActionPerformed
 
     public static void main(String args[]) {
-
         java.awt.EventQueue.invokeLater(new Runnable() {
             @Override
             public void run() {
-                ContinuingPlayer dialog = new ContinuingPlayer(new javax.swing.JFrame(), true);
+                ContinuingPlayer dialog = new ContinuingPlayer(new javax.swing.JFrame(), true, new QueueManager());
                 dialog.addWindowListener(new java.awt.event.WindowAdapter() {
                     @Override
                     public void windowClosing(java.awt.event.WindowEvent e) {

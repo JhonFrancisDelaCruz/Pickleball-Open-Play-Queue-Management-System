@@ -10,9 +10,8 @@ public class winner extends javax.swing.JDialog {
         setResizable(false);
     }
 
-    private char winningTeam = 0; // 'A', 'B' or 0 (nothing chosen)
+    private char winningTeam = 0;
 
-    /** Fills the popup with the court number and the two teams (players 1-2 = Team A, 3-4 = Team B). */
     public void setGame(int courtNumber, java.util.List<model.Player> players) {
         jLabel1.setText("COURT " + courtNumber);
         Player1.setText(players.get(0).getId() + " - " + players.get(0).getName());
@@ -21,7 +20,6 @@ public class winner extends javax.swing.JDialog {
         Player4.setText(players.get(3).getId() + " - " + players.get(3).getName());
     }
 
-    /** 'A' or 'B' for the declared winning team, 0 if the popup was closed without choosing. */
     public char getWinningTeam() {
         return winningTeam;
     }

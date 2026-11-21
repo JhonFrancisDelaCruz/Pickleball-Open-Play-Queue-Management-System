@@ -4,20 +4,14 @@ import java.util.List;
 import model.Player;
 
 public class Court extends javax.swing.JPanel {
-
     private Runnable onCompleteGame;
 
     public Court() {
         initComponents();
         clearPlayers();
     }
-    public void setCourtNumber(int number) {
-        courtTitle.setText("COURT " + number);
-    }
-
-    public void setOnCompleteGame(Runnable onCompleteGame) {
-        this.onCompleteGame = onCompleteGame;
-    }
+    public void setCourtNumber(int number) {courtTitle.setText("COURT " + number);}
+    public void setOnCompleteGame(Runnable onCompleteGame) {this.onCompleteGame = onCompleteGame;}
 
     public void clearPlayers() {
         Player1.setText(" ");
