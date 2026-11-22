@@ -79,18 +79,10 @@ public class ContinuingPlayer extends javax.swing.JDialog {
         b.setBackground(continuing[i] ? new java.awt.Color(0, 153, 51) : new java.awt.Color(51, 51, 51));
     }
 
-    /** True only if the popup was closed with the Confirm button. */
-    public boolean isConfirmed() {
-        return confirmed;
-    }
-
-    /** Whether the player at the given court position (0-3) wants to play again. */
-    public boolean wantsToContinue(int index) {
-        return continuing[index];
-    }
+    public boolean isConfirmed() { return confirmed;}
+    public boolean wantsToContinue(int index) { return continuing[index];}
 
 
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
         jPanel1 = new javax.swing.JPanel();
@@ -306,27 +298,27 @@ public class ContinuingPlayer extends javax.swing.JDialog {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void Button3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Button3ActionPerformed
+    private void Button3ActionPerformed(java.awt.event.ActionEvent evt) {
         toggle(2);
 
-    }//GEN-LAST:event_Button3ActionPerformed
+    }
 
-    private void Button1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Button1ActionPerformed
+    private void Button1ActionPerformed(java.awt.event.ActionEvent evt) {
         toggle(0);
-    }//GEN-LAST:event_Button1ActionPerformed
+    }
 
-    private void Button2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Button2ActionPerformed
+    private void Button2ActionPerformed(java.awt.event.ActionEvent evt) {
         toggle(1);
-    }//GEN-LAST:event_Button2ActionPerformed
+    }
 
-    private void Button4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Button4ActionPerformed
+    private void Button4ActionPerformed(java.awt.event.ActionEvent evt) {
         toggle(3);
-    }//GEN-LAST:event_Button4ActionPerformed
+}
 
-    private void ConfirmActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ConfirmActionPerformed
+    private void ConfirmActionPerformed(java.awt.event.ActionEvent evt) {
         confirmed = true;
         dispose();
-    }//GEN-LAST:event_ConfirmActionPerformed
+    }
 
     public static void main(String args[]) {
         java.awt.EventQueue.invokeLater(new Runnable() {

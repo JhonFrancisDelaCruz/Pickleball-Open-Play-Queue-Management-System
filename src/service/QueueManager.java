@@ -2,8 +2,7 @@ package service;
 
 import model.Player;
 import queue.PlayerQueue;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class QueueManager {
     public static final int PLAYERS_PER_GAME = 4;

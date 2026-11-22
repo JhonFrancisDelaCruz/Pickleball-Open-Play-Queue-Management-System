@@ -1,93 +1,73 @@
 package queue;
 
 import model.Player;
-import java.util.ArrayList;
-import java.util.List;
-
+import java.util.*;
 public class PlayerQueue {
 
-    private static class Node {
-        Player data;
-        Node next;
-        Node(Player data) {
-            this.data = data;
-        }
-    }
+    // The line itself. Just a normal list of players.
+    private final List<Player> line = new ArrayList<>();
 
-    private Node front; 
-    private Node rear; 
-    private int size;
-
+    // Join the line: put the player at the BACK.
     public void enqueue(Player player) {
-        Node node = new Node(player);
-        if (isEmpty()) {
-            front = node;
-        } else {
-            rear.next = node;
-        }
-        rear = node;
-        size++;
+        line.add(player);
     }
 
+    // Leave from the FRONT: remove and return the first player.
+    // Returns null if nobody is waiting.
     public Player dequeue() {
-        if (isEmpty()) {
+        if (line.isEmpty()) {
             return null;
         }
-        Player player = front.data;
-        front = front.next;
-        if (front == null) {
-            rear = null;
-        }
-        size--;
-        return player;
+        return line.remove(0);
     }
 
+    /* Look at the FRONT player without removing them.
+     Returns null if nobody is waiting.*/
     public Player peek() {
-        return isEmpty() ? null : front.data;
+        if (line.isEmpty()) {
+            return null;
+        }
+        return line.get(0);
     }
 
+    // True when nobody is waiting.
     public boolean isEmpty() {
-        return front == null;
+        return line.isEmpty();
+    }
+
+    // How many players are waiting.
+    public int size() {
+        return line.size();
+    }
+
+    // Remove a specific player by ID (used when someone presses Leave).
+    // Returns the removed player, or null if the ID was not found.
+    public Player remove(String playerId) {
+        for (int i = 0; i < line.size(); i++) {
+            Player p = line.get(i);
+            if (p.getId().equalsIgnoreCase(playerId)) {
+                line.remove(i);
+                return p;
+            }
+        }
+        return null;
+    }
+
+    // A copy of the line, in order, so other code can look through it
+    // without changing the real queue.
+    public List<Player> toList() {
+        return new ArrayList<>(line);
     }
 
     public String display() {
         StringBuilder sb = new StringBuilder();
-        for (Node cur = front; cur != null; cur = cur.next) {
-            sb.append("  ").append(cur.data.getName()).append(" - ").append(cur.data.getId());
-            if (!cur.data.isEligible()) {
+        for (Player p : line) {
+            sb.append("  ").append(p.getName()).append(" - ").append(p.getId());
+            if (!p.isEligible()) {
                 sb.append("  (skips next game)");
             }
             sb.append("\n");
         }
         return sb.toString();
-    }
-
-    public int size() {
-        return size;
-    }
-
-    public List<Player> toList() {
-        List<Player> list = new ArrayList<>();
-        for (Node cur = front; cur != null; cur = cur.next) {
-            list.add(cur.data);
-        }
-        return list;
-    }
-
-    public Player remove(String playerId) {
-        Node prev = null;
-        for (Node cur = front; cur != null; prev = cur, cur = cur.next) {
-            if (cur.data.getId().equalsIgnoreCase(playerId)) {
-                if (prev == null) {
-                    front = cur.next;
-                } else {
-                    prev.next = cur.next;}
-                
-                if (cur == rear) { rear = prev;}
-                size--;
-                return cur.data;
-            }
-        }
-        return null;
     }
 }

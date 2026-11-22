@@ -108,8 +108,7 @@ public class MainDashboard extends JFrame {
     CompletedGames.setText(String.valueOf(completedGamesCount));
     TotalWinner.setText(String.valueOf(totalWinnersCount));
     jLabel10.setText("TOTAL COURTS: "+String.valueOf(courts.size()));
-    WaitingLimit.setText(String.valueOf(getMaxWaitingPlayers()));
-    
+    WaitingLimit.setText(String.valueOf(getMaxWaitingPlayers()));  
     
 }
 
@@ -848,6 +847,7 @@ public class MainDashboard extends JFrame {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
+    
     private void RegisterActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_RegisterActionPerformed
        if (queueManager.isQueueFull()) {
         JOptionPane.showMessageDialog(this,

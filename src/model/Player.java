@@ -13,37 +13,19 @@ public class Player {
         this.name = name;
     }
 
-    public String getId() {
-        return id;
-    }
+    public String getId() {return id;}
+    public String getName() { return name;}
+    
+    public int getConsecutiveGames() { return consecutiveGames;}
 
-    public String getName() {
-        return name;
-    }
+    public boolean isEligible() {return !skipNextSelection;}
+    
+    public boolean isLeaveAfterGame() { return leaveAfterGame;}
 
-    public int getConsecutiveGames() {
-        return consecutiveGames;
-    }
+    public void setLeaveAfterGame(boolean leaveAfterGame) { this.leaveAfterGame = leaveAfterGame;}
 
-    public boolean isEligible() {
-        return !skipNextSelection;
-    }
-
-    public boolean isLeaveAfterGame() {
-        return leaveAfterGame;
-    }
-
-    public void setLeaveAfterGame(boolean leaveAfterGame) {
-        this.leaveAfterGame = leaveAfterGame;
-    }
-
-    public int getWins() {
-        return wins;
-    }
-
-    public void addWin() {
-        wins++;
-    }
+    public int getWins() { return wins;}
+    public void addWin() {wins++;}
 
     public void recordCompletedGame() {
         consecutiveGames++;
