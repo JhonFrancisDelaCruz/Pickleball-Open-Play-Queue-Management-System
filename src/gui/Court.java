@@ -10,9 +10,12 @@ public class Court extends javax.swing.JPanel {
         initComponents();
         clearPlayers();
     }
+    // Shows the court number in the title.
     public void setCourtNumber(int number) {courtTitle.setText("COURT " + number);}
+    // Saves what to run when Complete Game is clicked.
     public void setOnCompleteGame(Runnable onCompleteGame) {this.onCompleteGame = onCompleteGame;}
 
+    // Empties the 4 player slots.
     public void clearPlayers() {
         Player1.setText(" ");
         Player2.setText(" ");
@@ -20,6 +23,7 @@ public class Court extends javax.swing.JPanel {
         Player4.setText(" ");
     }
     
+    // Shows the 4 playing players on the court.
     public void setPlayers(List<Player> players) {
     clearPlayers();
     if (players.size() > 0) {Player1.setText(players.get(0).getId() + " - " + players.get(0).getName());}
@@ -202,6 +206,7 @@ public class Court extends javax.swing.JPanel {
     }// </editor-fold>//GEN-END:initComponents
 
     private void completeGameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_completeGameActionPerformed
+        // Complete Game button: runs the saved action.
         if (onCompleteGame != null) {
             onCompleteGame.run();
         }

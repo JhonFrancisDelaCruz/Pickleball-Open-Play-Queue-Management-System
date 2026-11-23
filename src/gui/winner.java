@@ -12,6 +12,7 @@ public class winner extends javax.swing.JDialog {
 
     private char winningTeam = 0;
 
+    // Shows the court number and the two teams.
     public void setGame(int courtNumber, java.util.List<model.Player> players) {
         jLabel1.setText("COURT " + courtNumber);
         Player1.setText(players.get(0).getId() + " - " + players.get(0).getName());
@@ -20,6 +21,7 @@ public class winner extends javax.swing.JDialog {
         Player4.setText(players.get(3).getId() + " - " + players.get(3).getName());
     }
 
+    // Returns the chosen team (A or B), or 0 if none.
     public char getWinningTeam() {
         return winningTeam;
     }
@@ -255,15 +257,18 @@ public class winner extends javax.swing.JDialog {
     }// </editor-fold>//GEN-END:initComponents
 
     private void TeamBwinnerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_TeamBwinnerActionPerformed
+        // Team B button: sets B as winner and closes.
         winningTeam = 'B';
         dispose();
     }//GEN-LAST:event_TeamBwinnerActionPerformed
 
     private void TeamAwinnerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_TeamAwinnerActionPerformed
+        // Team A button: sets A as winner and closes.
         winningTeam = 'A';
         dispose();
     }//GEN-LAST:event_TeamAwinnerActionPerformed
 
+    // Test launcher for this popup only.
     public static void main(String args[]) {
         java.awt.EventQueue.invokeLater(new Runnable() {
             @Override

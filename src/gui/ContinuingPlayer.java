@@ -33,13 +33,16 @@ public class ContinuingPlayer extends javax.swing.JDialog {
     private final boolean[] continuing = new boolean[4];
     private boolean confirmed = false;
 
+    // Returns the 4 toggle buttons.
     private javax.swing.JButton[] buttons() {
         return new javax.swing.JButton[] { Button1, Button2, Button3, Button4 };}
 
+    // Returns the 4 player name labels.
     private javax.swing.JLabel[] labels() {
         return new javax.swing.JLabel[] { Player1, Player2, Player3, Player4 };
     }
 
+    // Shows the 4 players who just finished.
     public void setPlayers(java.util.List<model.Player> players) {
     this.currentGamePlayers = players;
 
@@ -53,6 +56,7 @@ public class ContinuingPlayer extends javax.swing.JDialog {
     }
 }
 
+    // Switches a player between continue / leave.
     private void toggle(int i) {
 
     if (!continuing[i]) {
@@ -73,13 +77,16 @@ public class ContinuingPlayer extends javax.swing.JDialog {
     refreshButton(i);
 }
 
+    // Updates a button text and color to match its choice.
     private void refreshButton(int i) {
         javax.swing.JButton b = buttons()[i];
         b.setText(continuing[i] ? "Yes" : "No");
         b.setBackground(continuing[i] ? new java.awt.Color(0, 153, 51) : new java.awt.Color(51, 51, 51));
     }
 
+    // True if Confirm was clicked.
     public boolean isConfirmed() { return confirmed;}
+    // True if the player at this position wants to continue.
     public boolean wantsToContinue(int index) { return continuing[index];}
 
 
@@ -298,28 +305,34 @@ public class ContinuingPlayer extends javax.swing.JDialog {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
+    // Toggles player 3.
     private void Button3ActionPerformed(java.awt.event.ActionEvent evt) {
         toggle(2);
 
     }
 
+    // Toggles player 1.
     private void Button1ActionPerformed(java.awt.event.ActionEvent evt) {
         toggle(0);
     }
 
+    // Toggles player 2.
     private void Button2ActionPerformed(java.awt.event.ActionEvent evt) {
         toggle(1);
     }
 
+    // Toggles player 4.
     private void Button4ActionPerformed(java.awt.event.ActionEvent evt) {
         toggle(3);
 }
 
+    // Confirm button: saves the choices and closes.
     private void ConfirmActionPerformed(java.awt.event.ActionEvent evt) {
         confirmed = true;
         dispose();
     }
 
+    // Test launcher for this popup only.
     public static void main(String args[]) {
         java.awt.EventQueue.invokeLater(new Runnable() {
             @Override
