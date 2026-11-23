@@ -12,13 +12,21 @@ public class QueueManager {
     private final PlayerQueue waitingQueue = new PlayerQueue();
     private final List<Player> players = new ArrayList<>();
 
+<<<<<<< HEAD
     /** Builds the next unique player ID like P001, P002, P003... */
+=======
+    // Builds the next unique player ID like P001, P002, P003...
+>>>>>>> b8dc44f (Update the changes and change the logic of the game and fix the bugs)
     private String generatePlayerId() {
         lastPlayerNumber++;
         return String.format("P%03d", lastPlayerNumber);
     }
 
+<<<<<<< HEAD
     /** Registers a new player by name with an auto-made ID; returns null if the queue is full. */
+=======
+    // Registers a new player by name with an auto-made ID; returns null if the queue is full.
+>>>>>>> b8dc44f (Update the changes and change the logic of the game and fix the bugs)
     public Player registerPlayer(String name) {
         if (isQueueFull()) { return null; }
 
@@ -28,7 +36,11 @@ public class QueueManager {
         return player;
     }
 
+<<<<<<< HEAD
     /** Returns the players who would play next WITHOUT changing the queue (used by "next 4" display). */
+=======
+    // Returns the players who would play next WITHOUT changing the queue (used by "next 4" display).
+>>>>>>> b8dc44f (Update the changes and change the logic of the game and fix the bugs)
     public List<Player> peekNextGamePlayers() {
         List<Player> queue = waitingQueue.toList();
         List<Player> eligible = new ArrayList<>();
@@ -56,12 +68,30 @@ public class QueueManager {
         return result;
     }
 
+<<<<<<< HEAD
     /** Returns true when a game can start (4 players waiting, skip players count if needed). */
     public boolean canStartGame() {
         return peekNextGamePlayers().size() == PLAYERS_PER_GAME;
     }
 
     /** Takes the 4 players out of the queue for a game; returns null if there are not enough players. */
+=======
+    // Returns true when the next game must use skip players (fewer than 4 normal players waiting).
+    public boolean needsSkipPlayers() {
+        int eligible = 0;
+        for (Player p : waitingQueue.toList()) {
+            if (p.isEligible()) { eligible++; }
+        }
+        return eligible < PLAYERS_PER_GAME;
+    }
+
+    // Returns true when a game can start (4 players waiting, skip players count if needed).
+    public boolean canStartGame() {
+        return peekNextGamePlayers().size() == PLAYERS_PER_GAME;
+    }
+
+    // Takes the 4 players out of the queue for a game; returns null if there are not enough players.
+>>>>>>> b8dc44f (Update the changes and change the logic of the game and fix the bugs)
     public List<Player> selectPlayersForGame() {
         List<Player> chosen = peekNextGamePlayers();
         if (chosen.size() < PLAYERS_PER_GAME) { return null; }
@@ -90,7 +120,11 @@ public class QueueManager {
         return chosen;
     }
 
+<<<<<<< HEAD
     /** Finishes a game: players who continue go back to the queue, the others leave the system. */
+=======
+    // Finishes a game: players who continue go back to the queue, the others leave the system.
+>>>>>>> b8dc44f (Update the changes and change the logic of the game and fix the bugs)
     public List<Player> completeGame(List<Player> gamePlayers, List<Player> continuing) {
         List<Player> returning = new ArrayList<>();
         for (Player p : gamePlayers) {
@@ -104,7 +138,11 @@ public class QueueManager {
         return rotatePlayers(returning);
     }
 
+<<<<<<< HEAD
     /** Puts returning players at the end of the queue; returns the ones who could not fit (queue full). */
+=======
+    // Puts returning players at the end of the queue; returns the ones who could not fit (queue full).
+>>>>>>> b8dc44f (Update the changes and change the logic of the game and fix the bugs)
     public List<Player> rotatePlayers(List<Player> returning) {
         List<Player> noRoom = new ArrayList<>();
         for (Player p : returning) {
@@ -119,7 +157,11 @@ public class QueueManager {
         return noRoom;
     }
 
+<<<<<<< HEAD
     /** Removes a waiting player from the queue by ID; returns null if not found. */
+=======
+    // Removes a waiting player from the queue by ID; returns null if not found.
+>>>>>>> b8dc44f (Update the changes and change the logic of the game and fix the bugs)
     public Player leaveQueue(String playerId) {
         Player removed = waitingQueue.remove(playerId);
         if (removed != null) {
@@ -128,15 +170,26 @@ public class QueueManager {
         return removed;
     }
 
+<<<<<<< HEAD
     /** Returns how many free waiting slots are left after a game ends. */
+=======
+    // Returns how many free waiting slots are left after a game ends.
+>>>>>>> b8dc44f (Update the changes and change the logic of the game and fix the bugs)
     public int getAvailableSlotsAfterGame(List<Player> gamePlayers) {
         return Math.max(0, maxWaitingPlayers - waitingQueue.size());
     }
 
+<<<<<<< HEAD
     /** Returns true when the waiting queue reached its maximum size. */
     public boolean isQueueFull() {return waitingQueue.size() >= maxWaitingPlayers;}
 
     /** Sets the maximum number of waiting players (changes when courts are added/deleted). */
+=======
+    // Returns true when the waiting queue reached its maximum size.
+    public boolean isQueueFull() {return waitingQueue.size() >= maxWaitingPlayers;}
+
+    // Sets the maximum number of waiting players (changes when courts are added/deleted).
+>>>>>>> b8dc44f (Update the changes and change the logic of the game and fix the bugs)
     public void setMaxWaitingPlayers(int limit) {
         if (limit < 0) {
             throw new IllegalArgumentException("Waiting limit cannot be negative.");
@@ -144,9 +197,16 @@ public class QueueManager {
         maxWaitingPlayers = limit;
     }
 
+<<<<<<< HEAD
     /** Returns the maximum number of waiting players. */
     public int getMaxWaitingPlayers() { return maxWaitingPlayers;}
 
     /** Returns the waiting queue so the screen can display it. */
+=======
+    // Returns the maximum number of waiting players.
+    public int getMaxWaitingPlayers() { return maxWaitingPlayers;}
+
+    // Returns the waiting queue so the screen can display it.
+>>>>>>> b8dc44f (Update the changes and change the logic of the game and fix the bugs)
     public PlayerQueue getPlayerQueue() { return waitingQueue;}
 }

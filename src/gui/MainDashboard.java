@@ -247,14 +247,14 @@ public class MainDashboard extends JFrame {
     return null;
   }
 
-  /** Puts the 4 chosen players on the court and marks the court as busy. */
+  // Puts the 4 chosen players on the court and marks the court as busy.
   private void assignPlayersToCourt(Court court, List<Player> gamePlayers) {
     court.setPlayers(gamePlayers);
     activeGames.put(court, gamePlayers);
     log("Court " + (courts.indexOf(court) + 1) + " - GAME STARTED: " + names(gamePlayers) + ".");
   }
 
-  /** Shows the winning team of a finished game in the LIST OF WINNER table. */
+  // Shows the winning team of a finished game in the LIST OF WINNER table.
   private void addWinnerRow(int gameNo, char team, List<Player> winners) {
     javax.swing.table.DefaultTableModel model = (javax.swing.table.DefaultTableModel) ListOfWinner.getModel();
     Player p1 = winners.get(0);
@@ -319,6 +319,7 @@ public class MainDashboard extends JFrame {
         navbar = new javax.swing.JPanel();
         PlayerName = new javax.swing.JTextField();
         Register = new javax.swing.JButton();
+        PlayerName = new javax.swing.JTextField();
         jLabel1 = new javax.swing.JLabel();
         jPanel8 = new javax.swing.JPanel();
         StartGame = new javax.swing.JButton();
@@ -638,6 +639,7 @@ public class MainDashboard extends JFrame {
                 false, false, false, false, false, false
             };
 
+            // Makes the winner table read-only.
             public boolean isCellEditable(int rowIndex, int columnIndex) {
                 return canEdit [columnIndex];
             }
@@ -734,6 +736,9 @@ public class MainDashboard extends JFrame {
         Register.setFont(new java.awt.Font("Arial Rounded MT Bold", 1, 12)); // NOI18N
         Register.setText("REGISTER");
         Register.addActionListener(this::RegisterActionPerformed);
+
+        PlayerName.setToolTipText("Type the player's name");
+        PlayerName.addActionListener(this::PlayerNameActionPerformed);
 
         jLabel1.setFont(new java.awt.Font("Segoe UI Black", 1, 14)); // NOI18N
         jLabel1.setForeground(new java.awt.Color(255, 255, 255));
@@ -908,6 +913,18 @@ public class MainDashboard extends JFrame {
     if (availableCourt == null) {
         JOptionPane.showMessageDialog(this,"There are no available courts!");
         return;}
+
+    // Not enough normal players: ask before using the skipped players
+    if (queueManager.needsSkipPlayers()) {
+        Object[] buttons = {"Allow", "Cancel"};
+        int choice = JOptionPane.showOptionDialog(this,
+                "Allow skipped players to participate in this game?",
+                "Not Enough Eligible Players",
+                JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
+                null, buttons, buttons[0]);
+        if (choice != 0) { return; }   // Cancel (or closed) = do not start the game
+    }
+
     assignPlayersToCourt(availableCourt, queueManager.selectPlayersForGame());
     refreshWaitingPlayers();
 
@@ -1101,6 +1118,7 @@ private void customizeScrollBar(JScrollPane scrollPane) {
     private javax.swing.JTextField PlayerId;
     private javax.swing.JTextField PlayerName;
     private javax.swing.JButton Register;
+    private javax.swing.JTextField PlayerName;
     private javax.swing.JButton StartGame;
     private javax.swing.JLabel TotaWaitingPlayers;
     private javax.swing.JLabel TotalWinner;
