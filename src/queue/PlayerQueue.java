@@ -19,9 +19,12 @@ public class PlayerQueue {
     private Node rear;
     private int size;
 
+    // True if nobody is waiting.
     public boolean isEmpty() {return front == null;}
+    // Returns how many players are waiting.
     public int size() {return size;}
 
+    // Adds a player to the back of the line.
     public void enqueue(Player player) {
         Node newBox = new Node(player);
         if (isEmpty()) {
@@ -33,6 +36,7 @@ public class PlayerQueue {
         size++;
     }
 
+    // Removes and returns the player at the front of the line.
     public Player dequeue() {
         if (isEmpty()) {
             return null;
@@ -46,10 +50,12 @@ public class PlayerQueue {
         return firstPlayer;
     }
 
+    // Looks at the front player without removing.
     public Player peek() {
         return isEmpty() ? null : front.player;
     }
 
+    // Removes a player from anywhere in the line by ID.
     public Player remove(String playerId) {
         if (isEmpty()) {
             return null;
@@ -73,6 +79,7 @@ public class PlayerQueue {
         return null;
     }
 
+    // Copies the line into a list (front to back) for reading.
     public List<Player> toList() {
         List<Player> list = new ArrayList<>();
         for (Node current = front; current != null; current = current.next) {
@@ -81,6 +88,7 @@ public class PlayerQueue {
         return list;
     }
 
+    // Builds the text shown in the Waiting Players box.
     public String display() {
         StringBuilder text = new StringBuilder();
         for (Node current = front; current != null; current = current.next) {

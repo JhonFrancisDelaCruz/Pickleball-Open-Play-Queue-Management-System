@@ -147,20 +147,25 @@ public class LoginPage extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void txtPasswordActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtPasswordActionPerformed
+        // Password field Enter key (not used).
        
     }//GEN-LAST:event_txtPasswordActionPerformed
 
     private void UsernameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_UsernameActionPerformed
+        // Username field Enter key (not used).
      
     }//GEN-LAST:event_UsernameActionPerformed
 
     private void ExitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ExitActionPerformed
+        // Exit button: closes the program.
        System.exit(0);
     }//GEN-LAST:event_ExitActionPerformed
        
+    // Not used (program starts in Main).
     public static void main(String args[]) {
     }
     
+    // Checks username and password, then opens the dashboard.
     public void validLogin() {
     String enteredUsername = Username.getText().trim();
     String enteredPassword = new String(txtPassword.getPassword());
