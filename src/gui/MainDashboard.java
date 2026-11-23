@@ -12,6 +12,7 @@ public class MainDashboard extends JFrame {
     private static final int INITIAL_COURTS = 3;
     private static final int INITIAL_MAX_WAITING = 15;
     private static final int WAITING_SLOTS_PER_COURT = 4;
+    private static final int MAX_COURTS = 10;   // limit for the Add Court button
     
     private int completedGamesCount = 0;
     private int totalWinnersCount = 0;
@@ -61,10 +62,12 @@ public class MainDashboard extends JFrame {
     setResizable(false);
 }
    
+   // Waiting limit: 15 plus 4 for every court added after the first 3.
    private int getMaxWaitingPlayers() {
     return INITIAL_MAX_WAITING+ ((courtCount - INITIAL_COURTS) * WAITING_SLOTS_PER_COURT);
 }
 
+   // Redraws all courts, renumbers them and re-links their buttons.
    private void refreshCourtPanel() {
     pnlCourt.removeAll();
     courtCount = 0;
@@ -90,17 +93,19 @@ public class MainDashboard extends JFrame {
     scrollCourts.repaint();
 }
     
+  // Updates the waiting list, "next 4" box and statistics.
   public void refreshWaitingPlayers() {
     WaitingPlayers.setText(queueManager.getPlayerQueue().display());
 
     jTextArea4.setText("");
-    for (Player player : queueManager.peekNextEligible(QueueManager.PLAYERS_PER_GAME)) {
+    for (Player player : queueManager.peekNextGamePlayers()) {
         jTextArea4.append("  " + player.getName() + " - " + player.getId() + "\n");
     }
 
     updateStatistics();
 }
 
+  // Updates the numbers at the top (waiting, courts, games, winners).
   private void updateStatistics() {
     TotaWaitingPlayers.setText(String.valueOf(queueManager.getPlayerQueue().size()));
     ActiveCourt.setText(String.valueOf(activeGames.size()));
@@ -112,17 +117,20 @@ public class MainDashboard extends JFrame {
     
 }
 
+  // Updates the waiting limit and refreshes the screen.
   private void refreshAll() {
     queueManager.setMaxWaitingPlayers(getMaxWaitingPlayers());
     refreshWaitingPlayers();
 }
 
+  // Adds a timestamped line to the activity log.
   private void log(String message) {
     String time = new java.text.SimpleDateFormat("HH:mm:ss").format(new java.util.Date());
     jTextArea5.append("[" + time + "] " + message + "\n");
     jTextArea5.setCaretPosition(jTextArea5.getDocument().getLength());
   }
 
+  // Joins player names into one text like "A, B, C".
   private String names(List<Player> list) {
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < list.size(); i++) {
@@ -132,6 +140,7 @@ public class MainDashboard extends JFrame {
     return sb.toString();
   }
 
+  // Finds a player who is currently playing by ID.
   private Player findActivePlayer(String id) {
     for (List<Player> game : activeGames.values()) {
         for (Player p : game) {
@@ -141,6 +150,7 @@ public class MainDashboard extends JFrame {
     return null;
   }
 
+  // Finishes a game: asks winner and who continues, then updates everything.
   private void completeGame(Court court) {
     List<Player> gamePlayers = activeGames.get(court);
     if (gamePlayers == null) {
@@ -169,6 +179,7 @@ public class MainDashboard extends JFrame {
     }
   }
 
+  // Opens the winner popup and returns the chosen team.
   private char askWinningTeam(int courtNumber, List<Player> gamePlayers) {
     winner winnerDialog = new winner(this, true);
     winnerDialog.setGame(courtNumber, gamePlayers);
@@ -177,6 +188,7 @@ public class MainDashboard extends JFrame {
     return winnerDialog.getWinningTeam();
   }
 
+  // Opens the continue popup and returns the players who stay.
   private List<Player> askWhoContinues(List<Player> gamePlayers) {
     ContinuingPlayer continueDialog = new ContinuingPlayer(this,true,queueManager );
     continueDialog.setPlayers(gamePlayers);
@@ -198,6 +210,7 @@ public class MainDashboard extends JFrame {
     return continuing;
 }
 
+  // Saves the winners, counts the game and frees the court.
   private List<Player> recordResult(Court court, char team, List<Player> gamePlayers) {
     List<Player> winners = new ArrayList<>(gamePlayers.subList(team == 'A' ? 0 : 2, team == 'A' ? 2 : 4));
     for (Player p : winners) p.addWin();
@@ -224,6 +237,7 @@ public class MainDashboard extends JFrame {
     }
   }
 
+  // Returns the first court with no game, or null.
   private Court findAvailableCourt() {
     for (Court court : courts) {
         if (!activeGames.containsKey(court)) {
@@ -233,14 +247,14 @@ public class MainDashboard extends JFrame {
     return null;
   }
 
-  /** Puts the 4 chosen players on the court and marks the court as busy. */
+  // Puts the 4 chosen players on the court and marks the court as busy.
   private void assignPlayersToCourt(Court court, List<Player> gamePlayers) {
     court.setPlayers(gamePlayers);
     activeGames.put(court, gamePlayers);
     log("Court " + (courts.indexOf(court) + 1) + " - GAME STARTED: " + names(gamePlayers) + ".");
   }
 
-  /** Shows the winning team of a finished game in the LIST OF WINNER table. */
+  // Shows the winning team of a finished game in the LIST OF WINNER table.
   private void addWinnerRow(int gameNo, char team, List<Player> winners) {
     javax.swing.table.DefaultTableModel model = (javax.swing.table.DefaultTableModel) ListOfWinner.getModel();
     Player p1 = winners.get(0);
@@ -304,6 +318,7 @@ public class MainDashboard extends JFrame {
         jLabel12 = new javax.swing.JLabel();
         navbar = new javax.swing.JPanel();
         Register = new javax.swing.JButton();
+        PlayerName = new javax.swing.JTextField();
         jLabel1 = new javax.swing.JLabel();
         jPanel8 = new javax.swing.JPanel();
         StartGame = new javax.swing.JButton();
@@ -623,6 +638,7 @@ public class MainDashboard extends JFrame {
                 false, false, false, false, false, false
             };
 
+            // Makes the winner table read-only.
             public boolean isCellEditable(int rowIndex, int columnIndex) {
                 return canEdit [columnIndex];
             }
@@ -716,6 +732,9 @@ public class MainDashboard extends JFrame {
         Register.setFont(new java.awt.Font("Arial Rounded MT Bold", 1, 12)); // NOI18N
         Register.setText("REGISTER");
         Register.addActionListener(this::RegisterActionPerformed);
+
+        PlayerName.setToolTipText("Type the player's name");
+        PlayerName.addActionListener(this::PlayerNameActionPerformed);
 
         jLabel1.setFont(new java.awt.Font("Segoe UI Black", 1, 14)); // NOI18N
         jLabel1.setForeground(new java.awt.Color(255, 255, 255));
@@ -816,6 +835,7 @@ public class MainDashboard extends JFrame {
                 .addGap(16, 16, 16)
                 .addGroup(navbarLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel1)
+                    .addComponent(PlayerName, javax.swing.GroupLayout.PREFERRED_SIZE, 168, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(Register, javax.swing.GroupLayout.PREFERRED_SIZE, 168, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel2)
                     .addGroup(navbarLayout.createSequentialGroup()
@@ -829,6 +849,8 @@ public class MainDashboard extends JFrame {
             .addGroup(navbarLayout.createSequentialGroup()
                 .addGap(20, 20, 20)
                 .addComponent(jLabel1)
+                .addGap(6, 6, 6)
+                .addComponent(PlayerName, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(6, 6, 6)
                 .addComponent(Register, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(20, 20, 20)
@@ -849,7 +871,14 @@ public class MainDashboard extends JFrame {
     }// </editor-fold>//GEN-END:initComponents
     
     private void RegisterActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_RegisterActionPerformed
-       if (queueManager.isQueueFull()) {
+    // Registers the typed name with an auto-made ID (P001, P002, ...)
+    String name = PlayerName.getText().trim();
+    if (name.isEmpty()) {
+        JOptionPane.showMessageDialog(this, "Please enter the player's name!");
+        return;
+    }
+    Player added = queueManager.registerPlayer(name);
+    if (added == null) {
         JOptionPane.showMessageDialog(this,
             "The waiting queue is full!\nMaximum capacity: "
             + queueManager.getMaxWaitingPlayers() + " players.",
@@ -857,31 +886,40 @@ public class MainDashboard extends JFrame {
             JOptionPane.WARNING_MESSAGE);
         return;
     }
-
-    register dialog = new register(this, true, queueManager);
-    dialog.setLocationRelativeTo(this);
-    dialog.setVisible(true);
-    Player added = dialog.getRegisteredPlayer();
-
-    if (added != null) {log("Registered " + added.getName() + " (" + added.getId() + ")."); }
-    
+    log("Registered " + added.getName() + " (" + added.getId() + ").");
+    PlayerName.setText("");
+    PlayerName.requestFocusInWindow();
     refreshWaitingPlayers();
     }//GEN-LAST:event_RegisterActionPerformed
 
-    private void StartGameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_StartGameActionPerformed
+    private void PlayerNameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_PlayerNameActionPerformed
+        // Pressing Enter in the name box registers the player
+        RegisterActionPerformed(evt);
+    }//GEN-LAST:event_PlayerNameActionPerformed
 
-    if (queueManager.getPlayerQueue().size() < QueueManager.PLAYERS_PER_GAME) {
+    private void StartGameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_StartGameActionPerformed
+    // Starts a game if 4 players are waiting (skip players are used only when there are not enough normal players)
+    if (!queueManager.canStartGame()) {
         JOptionPane.showMessageDialog(this,"Not enough players! You need 4 players to start a game.");
         return;
     }
-    if (queueManager.countEligible() < QueueManager.PLAYERS_PER_GAME) {
-        JOptionPane.showMessageDialog(this,"Not enough eligible players! Some waiting players must skip this game selection.");
-        return;}
 
     Court availableCourt = findAvailableCourt();
     if (availableCourt == null) {
         JOptionPane.showMessageDialog(this,"There are no available courts!");
         return;}
+
+    // Not enough normal players: ask before using the skipped players
+    if (queueManager.needsSkipPlayers()) {
+        Object[] buttons = {"Allow", "Cancel"};
+        int choice = JOptionPane.showOptionDialog(this,
+                "Allow skipped players to participate in this game?",
+                "Not Enough Eligible Players",
+                JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
+                null, buttons, buttons[0]);
+        if (choice != 0) { return; }   // Cancel (or closed) = do not start the game
+    }
+
     assignPlayersToCourt(availableCourt, queueManager.selectPlayersForGame());
     refreshWaitingPlayers();
 
@@ -890,10 +928,12 @@ public class MainDashboard extends JFrame {
     }//GEN-LAST:event_StartGameActionPerformed
 
     private void PlayerIdActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_PlayerIdActionPerformed
+        // Leave ID field Enter key (not used).
 
     }//GEN-LAST:event_PlayerIdActionPerformed
 
     private void LeaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_LeaveActionPerformed
+        // Leave button: removes a waiting player, or marks a playing one to leave after the game.
         String id = PlayerId.getText().trim();
         if (id.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please enter the Player ID of the player who wants to leave.");
@@ -925,11 +965,18 @@ public class MainDashboard extends JFrame {
     }//GEN-LAST:event_LeaveActionPerformed
 
     private void AddCourtActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AddCourtActionPerformed
+        // Stops adding courts after the maximum of 10
+        if (courts.size() >= MAX_COURTS) {
+            JOptionPane.showMessageDialog(this, "Maximum of " + MAX_COURTS + " courts reached.",
+                    "Add Court", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         addCourt();
         log("Court " + courts.size() + " added.");
     }//GEN-LAST:event_AddCourtActionPerformed
 
     private void deleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteActionPerformed
+        // Delete Court button: removes the last court if it is free.
       if (courts.size() <= 1) {
         JOptionPane.showMessageDialog(this, "You must keep at least one court.",
                 "Delete Court",JOptionPane.WARNING_MESSAGE);
@@ -969,6 +1016,7 @@ public class MainDashboard extends JFrame {
     }//GEN-LAST:event_deleteActionPerformed
 
     private void logoutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_logoutActionPerformed
+        // Logout button: asks to confirm then returns to the login page.
         int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to logout?",
         "Logout", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
@@ -978,6 +1026,7 @@ public class MainDashboard extends JFrame {
     }
     }//GEN-LAST:event_logoutActionPerformed
 
+// Adds one new court and refreshes the screen.
 private void addCourt() {
     Court court = new Court();
     courts.add(court);
@@ -986,6 +1035,7 @@ private void addCourt() {
     refreshAll();
 }
 
+// Gives a scroll pane the custom dark scroll bar style.
 private void customizeScrollBar(JScrollPane scrollPane) {
 
     JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
@@ -1009,6 +1059,7 @@ private void customizeScrollBar(JScrollPane scrollPane) {
             return createZeroButton();
         }
 
+        // Makes a button with no size (used to hide arrows).
         private JButton createZeroButton() {
             JButton button = new JButton();
             button.setPreferredSize(new Dimension(0, 0));
@@ -1061,6 +1112,7 @@ private void customizeScrollBar(JScrollPane scrollPane) {
     private javax.swing.JLabel NonActiveCourt;
     private javax.swing.JTextField PlayerId;
     private javax.swing.JButton Register;
+    private javax.swing.JTextField PlayerName;
     private javax.swing.JButton StartGame;
     private javax.swing.JLabel TotaWaitingPlayers;
     private javax.swing.JLabel TotalWinner;
