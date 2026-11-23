@@ -51,6 +51,7 @@ public class Court extends javax.swing.JPanel {
 
         completeGame.setFont(new java.awt.Font("Segoe UI Black", 1, 12)); // NOI18N
         completeGame.setText("Complete Game");
+        completeGame.setFocusable(false);
         completeGame.addActionListener(this::completeGameActionPerformed);
 
         jPanel1.setBackground(new java.awt.Color(102, 102, 102));

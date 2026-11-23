@@ -243,11 +243,13 @@ public class winner extends javax.swing.JDialog {
         TeamAwinner.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
         TeamAwinner.setForeground(new java.awt.Color(255, 255, 255));
         TeamAwinner.setText("Declare Team A Winner");
+        TeamAwinner.setFocusable(false);
         TeamAwinner.addActionListener(this::TeamAwinnerActionPerformed);
         jPanel1.add(TeamAwinner, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 310, 304, 33));
 
         TeamBwinner.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
         TeamBwinner.setText("Declare Team B Winner");
+        TeamBwinner.setFocusable(false);
         TeamBwinner.addActionListener(this::TeamBwinnerActionPerformed);
         jPanel1.add(TeamBwinner, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 350, 304, 31));
 

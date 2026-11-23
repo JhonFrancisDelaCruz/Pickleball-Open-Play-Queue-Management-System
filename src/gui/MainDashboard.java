@@ -317,6 +317,7 @@ public class MainDashboard extends JFrame {
         ListOfWinner = new javax.swing.JTable();
         jLabel12 = new javax.swing.JLabel();
         navbar = new javax.swing.JPanel();
+        PlayerName = new javax.swing.JTextField();
         Register = new javax.swing.JButton();
         PlayerName = new javax.swing.JTextField();
         jLabel1 = new javax.swing.JLabel();
@@ -729,6 +730,9 @@ public class MainDashboard extends JFrame {
 
         navbar.setBackground(new java.awt.Color(51, 51, 51));
 
+        PlayerName.setToolTipText("Type the player's name");
+        PlayerName.addActionListener(this::PlayerNameActionPerformed);
+
         Register.setFont(new java.awt.Font("Arial Rounded MT Bold", 1, 12)); // NOI18N
         Register.setText("REGISTER");
         Register.addActionListener(this::RegisterActionPerformed);
@@ -747,6 +751,7 @@ public class MainDashboard extends JFrame {
         StartGame.setFont(new java.awt.Font("Verdana", 1, 14)); // NOI18N
         StartGame.setForeground(new java.awt.Color(255, 255, 255));
         StartGame.setText("START GAME");
+        StartGame.setFocusable(false);
         StartGame.addActionListener(this::StartGameActionPerformed);
 
         javax.swing.GroupLayout jPanel8Layout = new javax.swing.GroupLayout(jPanel8);
@@ -1111,6 +1116,7 @@ private void customizeScrollBar(JScrollPane scrollPane) {
     private javax.swing.JTable ListOfWinner;
     private javax.swing.JLabel NonActiveCourt;
     private javax.swing.JTextField PlayerId;
+    private javax.swing.JTextField PlayerName;
     private javax.swing.JButton Register;
     private javax.swing.JTextField PlayerName;
     private javax.swing.JButton StartGame;
